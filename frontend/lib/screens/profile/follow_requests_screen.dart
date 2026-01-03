@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/user_service.dart';
+import '../../core/services/socket_service.dart';
 import '../friends/friends_screen.dart';
 
 class FollowRequestsScreen extends ConsumerStatefulWidget {
@@ -16,10 +17,42 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
   bool _isLoading = true;
   final Set<int> _processingIds = {};
 
+  late Function(dynamic) _notificationHandler;
+
   @override
   void initState() {
     super.initState();
+    _notificationHandler = (data) {
+      if (data['type'] == 'follow_request') {
+        if (mounted) {
+          _loadRequests(); // Reload list to show new request
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${data['message']}'),
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'Refresh',
+                onPressed: _loadRequests,
+              ),
+            ),
+          );
+        }
+      }
+    };
     _loadRequests();
+    _setupSocketListeners();
+  }
+
+  void _setupSocketListeners() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.on('notification', _notificationHandler);
+  }
+
+  @override
+  void dispose() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.off('notification', _notificationHandler);
+    super.dispose();
   }
 
   Future<void> _loadRequests() async {

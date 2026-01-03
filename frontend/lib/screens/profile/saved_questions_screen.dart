@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/saved_service.dart';
 
-final savedQuestionsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+final savedQuestionsProvider = FutureProvider.autoDispose<List<dynamic>>((
+  ref,
+) async {
   final service = ref.read(savedServiceProvider);
   final result = await service.getSavedQuestions();
   return result['data'] ?? [];
@@ -12,7 +14,8 @@ class SavedQuestionsScreen extends ConsumerStatefulWidget {
   const SavedQuestionsScreen({super.key});
 
   @override
-  ConsumerState<SavedQuestionsScreen> createState() => _SavedQuestionsScreenState();
+  ConsumerState<SavedQuestionsScreen> createState() =>
+      _SavedQuestionsScreenState();
 }
 
 class _SavedQuestionsScreenState extends ConsumerState<SavedQuestionsScreen> {
@@ -21,10 +24,7 @@ class _SavedQuestionsScreenState extends ConsumerState<SavedQuestionsScreen> {
     final savedAsync = ref.watch(savedQuestionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Knowledge Vault'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Knowledge Vault'), centerTitle: true),
       body: savedAsync.when(
         data: (questions) {
           if (questions.isEmpty) {
@@ -32,7 +32,11 @@ class _SavedQuestionsScreenState extends ConsumerState<SavedQuestionsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.bookmark_border_rounded, size: 64, color: Theme.of(context).dividerColor),
+                  Icon(
+                    Icons.bookmark_border_rounded,
+                    size: 64,
+                    color: Theme.of(context).dividerColor,
+                  ),
                   const SizedBox(height: 16),
                   const Text('No saved questions yet'),
                 ],
@@ -78,56 +82,68 @@ class _SavedQuestionsScreenState extends ConsumerState<SavedQuestionsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (question['options'] is List)
-                  ...(question['options'] as List).map<Widget>((opt) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                     child: Row(
-                       children: [
-                         Icon(
-                            opt['text'] == question['correctAnswer'] || opt['id'] == question['correctAnswer'] // Adjust based on data
-                                ? Icons.check_circle_rounded : Icons.circle_outlined,
+                  ...(question['options'] as List).map<Widget>(
+                    (opt) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            opt['text'] == question['correctAnswer'] ||
+                                    opt['id'] ==
+                                        question['correctAnswer'] // Adjust based on data
+                                ? Icons.check_circle_rounded
+                                : Icons.circle_outlined,
                             size: 16,
-                            color: opt['text'] == question['correctAnswer'] || opt['id'] == question['correctAnswer'] 
-                                ? Colors.green : Colors.grey,
-                         ),
-                         const SizedBox(width: 8),
-                         Expanded(child: Text(opt['text'] ?? '')),
-                       ],
-                     ),
-                  )).toList(),
-                  const SizedBox(height: 12),
-                  if (question['explanation'] != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text('Explanation: ${question['explanation']}'),
-                    ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                         try {
-                           await ref.read(savedServiceProvider).toggleSave(question['id']);
-                           ref.invalidate(savedQuestionsProvider);
-                           if (mounted) {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(content: Text('Removed from Vault')),
-                             );
-                           }
-                         } catch (e) {
-                           // error
-                         }
-                      },
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Remove from Vault'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
+                            color:
+                                opt['text'] == question['correctAnswer'] ||
+                                    opt['id'] == question['correctAnswer']
+                                ? Colors.green
+                                : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(opt['text'] ?? '')),
+                        ],
                       ),
                     ),
                   ),
+                const SizedBox(height: 12),
+                if (question['explanation'] != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('Explanation: ${question['explanation']}'),
+                  ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(savedServiceProvider)
+                            .toggleSave(question['id']);
+                        ref.invalidate(savedQuestionsProvider);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Removed from Vault')),
+                          );
+                        }
+                      } catch (e) {
+                        // error
+                      }
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Remove from Vault'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

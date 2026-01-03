@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/services/friend_service.dart';
+import '../../core/services/socket_service.dart';
 import '../../core/theme.dart';
 import '../duel/topic_selection_screen.dart';
 
@@ -47,12 +48,39 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
+  late Function(dynamic) _notificationHandler;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChange);
+
+    _notificationHandler = (data) {
+      if (data['type'] == 'follow_accepted' ||
+          data['type'] == 'follow_declined') {
+        if (mounted) {
+          // Refresh lists
+          ref.invalidate(friendsProvider);
+          ref.invalidate(allUsersProvider);
+
+          if (data['type'] == 'follow_accepted') {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('${data['message']}')));
+          }
+        }
+      }
+    };
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupSocketListeners();
+    });
+  }
+
+  void _setupSocketListeners() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.on('notification', _notificationHandler);
   }
 
   void _handleTabChange() {
@@ -66,6 +94,18 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     }
   }
 
+  @override
+  void dispose() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.off('notification', _notificationHandler);
+
+    _tabController.removeListener(_handleTabChange);
+    _tabController.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -75,15 +115,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         });
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _tabController.removeListener(_handleTabChange);
-    _tabController.dispose();
-    _searchController.dispose();
-    _debounce?.cancel();
-    super.dispose();
   }
 
   Future<void> _followUser(int userId) async {
@@ -103,7 +134,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'User followed successfully!',
+              'Follow request successfully sent',
               style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
             ),
             backgroundColor: AppTheme.success,
@@ -569,7 +600,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                       child: Text(
                         searchQuery.isEmpty
                             ? 'No users found.'
-                            : 'No users match \"$searchQuery\"',
+                            : 'No users match "$searchQuery"',
                         style: GoogleFonts.outfit(
                           color: AppTheme.textSecondary,
                         ),
@@ -626,7 +657,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     Map<String, dynamic> user,
     Set<int> followingInProgress,
   ) {
-    final isFollowing = user['isFollowing'] ?? false;
+    final followStatus = user['followStatus'];
+    // Defensive check: if status is accepted, treat as following even if isFollowing is false
+    final isFollowing =
+        (user['isFollowing'] ?? false) || followStatus == 'accepted';
+    final isPending = followStatus == 'pending';
     final userId = user['id'] as int;
     final isLoading = followingInProgress.contains(userId);
     final displayName = user['fullName'] ?? user['username'] ?? 'User';
@@ -737,6 +772,39 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                         ),
                       ],
                     ),
+                  ),
+                )
+              : isPending
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.textMuted.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.textMuted.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 16,
+                        color: AppTheme.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Pending',
+                        style: GoogleFonts.outfit(
+                          color: AppTheme.textMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : Container(

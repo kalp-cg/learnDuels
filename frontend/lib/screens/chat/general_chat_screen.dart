@@ -219,13 +219,12 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
+      // With reverse: true, 0.0 is the bottom (newest messages)
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -239,10 +238,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: Column(
           children: [
             const Text(
@@ -255,10 +251,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
             ),
             Text(
               '$_onlineUsers online',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
         ),
@@ -271,8 +264,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
       ),
       body: userAsync.when(
         data: (user) {
-          if (user == null)
+          if (user == null) {
             return const Center(child: Text('Please login to chat'));
+          }
           final currentUserId = user['id'];
 
           return Column(
@@ -329,26 +323,101 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                 child: _messages.isEmpty
                     ? _buildEmptyState(context)
                     : ListView.builder(
+                        reverse: true,
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
-                          final msg = _messages[index];
+                          // Calculate real index in _messages list (which is Oldest -> Newest)
+                          final int realIndex = _messages.length - 1 - index;
+                          final msg = _messages[realIndex];
+
                           // Robust comparison by converting both to string
                           final isMe =
                               msg['senderId'].toString() ==
                               currentUserId.toString();
+
+                          // Show avatar if this is the first message (oldest, realIndex 0)
+                          // or if the previous message (realIndex - 1) is from a different sender
                           final showAvatar =
-                              index == 0 ||
-                              _messages[index - 1]['senderId'].toString() !=
+                              realIndex == 0 ||
+                              _messages[realIndex - 1]['senderId'].toString() !=
                                   msg['senderId'].toString();
 
-                          return _buildMessageBubble(
+                          // Date Header Logic
+                          bool showDateHeader = false;
+                          DateTime? currentMsgDate;
+
+                          if (msg['timestamp'] != null) {
+                            currentMsgDate = DateTime.parse(
+                              msg['timestamp'],
+                            ).toLocal();
+                            if (realIndex == 0) {
+                              showDateHeader = true;
+                            } else {
+                              final prevTimestamp =
+                                  _messages[realIndex - 1]['timestamp'];
+                              if (prevTimestamp != null) {
+                                final prevMsgDate = DateTime.parse(
+                                  prevTimestamp,
+                                ).toLocal();
+                                showDateHeader = !_isSameDay(
+                                  currentMsgDate,
+                                  prevMsgDate,
+                                );
+                              } else {
+                                showDateHeader = true;
+                              }
+                            }
+                          }
+
+                          final messageBubble = _buildMessageBubble(
                             context,
                             msg,
                             isMe,
                             showAvatar,
                           );
+
+                          if (showDateHeader && currentMsgDate != null) {
+                            return Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16.0,
+                                  ),
+                                  child: Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Theme.of(context).brightness ==
+                                                Brightness.light
+                                            ? Colors.grey[300]
+                                            : Colors.grey[800],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        _formatDate(currentMsgDate),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                messageBubble,
+                              ],
+                            );
+                          }
+
+                          return messageBubble;
                         },
                       ),
               ),
@@ -569,7 +638,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                   decoration: BoxDecoration(
                     color: isMe
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surface,
+                        : Theme.of(context).brightness == Brightness.light
+                        ? Colors.grey[200]
+                        : Colors.grey[800],
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -577,12 +648,11 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                       bottomRight: Radius.circular(isMe ? 4 : 16),
                     ),
                     boxShadow: [
-                      if (!isMe)
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
                     ],
                   ),
                   child: Column(
@@ -696,18 +766,20 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                             code: TextStyle(
                               backgroundColor: isMe
                                   ? Colors.black.withValues(alpha: 0.2)
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHighest,
+                                  : Theme.of(context).brightness ==
+                                        Brightness.light
+                                  ? Colors.grey[300]
+                                  : Colors.grey[900],
                               fontFamily: 'monospace',
                               fontSize: 14,
                             ),
                             codeblockDecoration: BoxDecoration(
                               color: isMe
                                   ? Colors.black.withValues(alpha: 0.2)
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHighest,
+                                  : Theme.of(context).brightness ==
+                                        Brightness.light
+                                  ? Colors.grey[300]
+                                  : Colors.grey[900],
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
@@ -756,7 +828,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  color: Theme.of(context).brightness == Brightness.light
+                      ? Colors.grey[200]
+                      : Colors.grey[800],
                   borderRadius: BorderRadius.circular(8),
                   border: Border(
                     left: BorderSide(
@@ -855,5 +929,26 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     if (timestamp == null) return '';
     final date = DateTime.parse(timestamp).toLocal();
     return DateFormat('h:mm a').format(date);
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dateToCheck = DateTime(date.year, date.month, date.day);
+
+    if (dateToCheck == today) {
+      return 'Today';
+    } else if (dateToCheck == yesterday) {
+      return 'Yesterday';
+    } else {
+      return DateFormat('MMMM d, y').format(date);
+    }
   }
 }
