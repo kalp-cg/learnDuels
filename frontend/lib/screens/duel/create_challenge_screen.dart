@@ -120,6 +120,7 @@ class _CreateChallengeScreenState extends ConsumerState<CreateChallengeScreen> {
                       'You each complete the quiz separately',
                     ),
                     value: 'ASYNC',
+                    groupValue: _challengeType,
                     toggleable: false,
                     onChanged: (value) {
                       if (value != null) {
@@ -131,6 +132,7 @@ class _CreateChallengeScreenState extends ConsumerState<CreateChallengeScreen> {
                     title: const Text('Instant (Real-time)'),
                     subtitle: const Text('Compete live at the same time'),
                     value: 'INSTANT',
+                    groupValue: _challengeType,
                     toggleable: false,
                     onChanged: (value) {
                       if (value != null) {

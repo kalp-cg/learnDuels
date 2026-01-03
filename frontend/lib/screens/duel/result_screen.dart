@@ -13,8 +13,6 @@ class ResultScreen extends ConsumerStatefulWidget {
 
 class _ResultScreenState extends ConsumerState<ResultScreen> {
   String? _currentUserId;
-  String?
-  _lastNavigatedDuelId; // Track which duel we navigated to, prevent duplicate navigation
 
   @override
   void initState() {
@@ -32,16 +30,16 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
         final userProfile = await ref.read(userServiceProvider).getProfile();
         if (userProfile != null && userProfile['id'] != null) {
           userId = userProfile['id'].toString();
-          await prefs.setString('userId', userId!);
+          await prefs.setString('userId', userId);
           debugPrint('✅ User ID fetched and saved: $userId');
         } else {
-           debugPrint('❌ User profile is null or missing ID');
+          debugPrint('❌ User profile is null or missing ID');
         }
       } catch (e) {
         debugPrint('❌ Failed to fetch user profile: $e');
       }
     } else {
-       debugPrint('✅ User ID found in prefs: $userId');
+      debugPrint('✅ User ID found in prefs: $userId');
     }
 
     if (mounted) {
@@ -60,6 +58,13 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
     // We can use args for initial display, but prefer duelState for real-time updates
     Map<String, dynamic> resultData = {};
     final stateValue = duelState.value;
+
+    // Check for waiting status first
+    final status = stateValue?['status'] ?? args?['status'];
+
+    if (status == 'waiting_for_opponent') {
+      return _buildWaitingScreen(context, stateValue ?? args ?? {});
+    }
 
     if (stateValue != null &&
         stateValue['status'] == 'completed' &&
@@ -90,10 +95,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
               const SizedBox(height: 16),
               const Text('Loading user profile...'),
               const SizedBox(height: 16),
-              TextButton(
-                onPressed: _loadUser,
-                child: const Text('Retry'),
-              ),
+              TextButton(onPressed: _loadUser, child: const Text('Retry')),
             ],
           ),
         ),
@@ -101,7 +103,6 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
     }
 
     final winnerId = resultData['winnerId']?.toString();
-    final scores = resultData['scores'] as Map<String, dynamic>? ?? {};
 
     debugPrint(
       '🏆 ResultScreen: winnerId=$winnerId, currentUserId=$_currentUserId',
@@ -110,7 +111,6 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
     // Determine win/loss/tie
     final isWin = winnerId != null && winnerId == _currentUserId;
     final isTie = winnerId == null;
-    final userScore = scores[_currentUserId] ?? 0;
 
     // No rematch feature - just show results
 
@@ -191,22 +191,207 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
     );
   }
 
+  Widget _buildWaitingScreen(BuildContext context, Map<String, dynamic> data) {
+    final score = data['finalScore'] ?? data['currentScore'] ?? 0;
+    final stats = data['myStats'];
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.hourglass_top_rounded,
+                  size: 80,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'You Finished!',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Your Score: $score',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              if (stats != null) ...[
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).dividerColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatItem(
+                            context,
+                            Icons.check_circle,
+                            Colors.green,
+                            '${stats['correctAnswers'] ?? 0}',
+                            'Correct',
+                          ),
+                          _buildStatItem(
+                            context,
+                            Icons.cancel,
+                            Colors.red,
+                            '${stats['wrongAnswers'] ?? 0}',
+                            'Wrong',
+                          ),
+                          _buildStatItem(
+                            context,
+                            Icons.skip_next,
+                            Colors.grey,
+                            '${stats['skippedAnswers'] ?? 0}',
+                            'Skipped',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 16,
+                            color: Theme.of(context).hintColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Total Time: ${stats['timeTaken'] ?? 0}s',
+                            style: TextStyle(
+                              color: Theme.of(context).hintColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+              const Text(
+                'Waiting for opponent to finish...',
+                style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'You can stay here to see the results live, or leave now and get notified later.',
+                style: TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 48),
+              SizedBox(
+                height: 56,
+                child: OutlinedButton(
+                  onPressed: () {
+                    ref.read(duelStateProvider.notifier).reset();
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/home',
+                      (route) => false,
+                    );
+                  },
+                  child: const Text('Leave Duel'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(
+    BuildContext context,
+    IconData icon,
+    Color color,
+    String value,
+    String label,
+  ) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
   Widget _buildPlayerStatsCard(
     Map<String, dynamic> resultData,
     String? currentUserId,
   ) {
-    final players = resultData['players'] as Map<String, dynamic>? ?? {};
+    // Robust parsing of players map
+    Map<String, dynamic> players = {};
+    try {
+      final rawPlayers = resultData['players'];
+      if (rawPlayers is Map) {
+        players = Map<String, dynamic>.from(rawPlayers);
+      }
+    } catch (e) {
+      debugPrint('Error parsing players map: $e');
+    }
+
     final winnerId = resultData['winnerId']?.toString();
     final totalQuestions = resultData['totalQuestions'] ?? 0;
 
     if (players.isEmpty) {
-      // Fallback to old format
+      // Fallback to old format or show waiting message
       final scores = resultData['scores'] as Map<String, dynamic>? ?? {};
       final userScore = scores[currentUserId] ?? 0;
-      return Text(
-        'Your Score: $userScore',
-        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        textAlign: TextAlign.center,
+
+      return Column(
+        children: [
+          Text(
+            'Your Score: $userScore',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Waiting for detailed results...',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
       );
     }
 
@@ -259,7 +444,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
           Row(
             children: playerList.map((entry) {
               final playerId = entry.key.toString(); // Ensure string
-              final playerData = entry.value as Map<String, dynamic>;
+              final playerData = Map<String, dynamic>.from(entry.value as Map);
               final isWinner = winnerId?.toString() == playerId;
               final isCurrentUser = playerId == currentUserId?.toString();
 
@@ -315,7 +500,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 8),
-                      // Correct/Wrong counts
+                      // Correct/Wrong/Skipped counts
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -338,6 +523,15 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                             style: Theme.of(
                               context,
                             ).textTheme.bodySmall?.copyWith(color: Colors.red),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.skip_next, size: 14, color: Colors.grey),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${playerData['skippedAnswers'] ?? 0}',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                           ),
                         ],
                       ),

@@ -5,55 +5,68 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme.dart';
 import '../../core/services/api_service.dart';
-import '../duel/topic_selection_screen.dart';
 
 // Provider for fetching challenges
-final pendingChallengesProvider = FutureProvider.autoDispose<Map<String, List<dynamic>>>((ref) async {
-  final api = ApiService();
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('accessToken');
-  
-  if (token == null) return {'received': [], 'sent': []};
-  
-  try {
-    final response = await api.client.get(
-      '/challenges',
-      queryParameters: {'status': 'PENDING', 'limit': 50},
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
-    );
-    
-    if (response.data['success'] == true) {
-      final challenges = response.data['data'] as List? ?? [];
-      
-      // Get current user ID
-      final meResponse = await api.client.get(
-        '/auth/me',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-      final userId = meResponse.data['data']?['id'];
-      
-      // Separate received and sent
-      final received = challenges.where((c) => c['opponentId'] == userId || 
-        (c['participants'] != null && (c['participants'] as List).any((p) => p['userId'] == userId && p['status'] == 'invited'))).toList();
-      final sent = challenges.where((c) => c['challengerId'] == userId).toList();
-      
-      return {'received': received, 'sent': sent};
-    }
-    return {'received': [], 'sent': []};
-  } catch (e) {
-    debugPrint('Error fetching challenges: $e');
-    return {'received': [], 'sent': []};
-  }
-});
+final pendingChallengesProvider =
+    FutureProvider.autoDispose<Map<String, List<dynamic>>>((ref) async {
+      final api = ApiService();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken');
+
+      if (token == null) return {'received': [], 'sent': []};
+
+      try {
+        final response = await api.client.get(
+          '/challenges',
+          queryParameters: {'status': 'PENDING', 'limit': 50},
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        );
+
+        if (response.data['success'] == true) {
+          final challenges = response.data['data'] as List? ?? [];
+
+          // Get current user ID
+          final meResponse = await api.client.get(
+            '/auth/me',
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+          final userId = meResponse.data['data']?['id'];
+
+          // Separate received and sent
+          final received = challenges
+              .where(
+                (c) =>
+                    c['opponentId'] == userId ||
+                    (c['participants'] != null &&
+                        (c['participants'] as List).any(
+                          (p) =>
+                              p['userId'] == userId && p['status'] == 'invited',
+                        )),
+              )
+              .toList();
+          final sent = challenges
+              .where((c) => c['challengerId'] == userId)
+              .toList();
+
+          return {'received': received, 'sent': sent};
+        }
+        return {'received': [], 'sent': []};
+      } catch (e) {
+        debugPrint('Error fetching challenges: $e');
+        return {'received': [], 'sent': []};
+      }
+    });
 
 class PendingChallengesScreen extends ConsumerStatefulWidget {
   const PendingChallengesScreen({super.key});
 
   @override
-  ConsumerState<PendingChallengesScreen> createState() => _PendingChallengesScreenState();
+  ConsumerState<PendingChallengesScreen> createState() =>
+      _PendingChallengesScreenState();
 }
 
-class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScreen>
+class _PendingChallengesScreenState
+    extends ConsumerState<PendingChallengesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -73,34 +86,33 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
     final api = ApiService();
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
-    
+
     try {
       final response = await api.client.post(
         '/challenges/$challengeId/accept',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      
+
       ref.invalidate(pendingChallengesProvider);
-      
+
       if (mounted) {
         final data = response.data['data'];
         final duelId = data['duelId']; // Note: ensure backend returns duelId
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Challenge accepted! Starting quiz...', style: GoogleFonts.outfit()),
+            content: Text(
+              'Challenge accepted! Starting quiz...',
+              style: GoogleFonts.outfit(),
+            ),
             backgroundColor: AppTheme.success,
           ),
         );
-        
+
         if (duelId != null) {
-           Navigator.pushNamed(
-             context, 
-             '/duel',
-             arguments: {'duelId': duelId}
-           );
+          Navigator.pushNamed(context, '/duel', arguments: {'duelId': duelId});
         } else {
-           debugPrint('Warning: No duelId returned from accept challenge');
+          debugPrint('Warning: No duelId returned from accept challenge');
         }
       }
     } catch (e) {
@@ -119,15 +131,15 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
     final api = ApiService();
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
-    
+
     try {
       await api.client.delete(
         '/challenges/$challengeId',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      
+
       ref.invalidate(pendingChallengesProvider);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -151,12 +163,19 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
         backgroundColor: AppTheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppTheme.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Challenges',
-          style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700),
+          style: GoogleFonts.outfit(
+            color: AppTheme.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         centerTitle: true,
         bottom: TabBar(
@@ -190,18 +209,29 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppTheme.primary),
+          ),
           error: (e, s) => Center(
-            child: Text('Error loading challenges', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+            child: Text(
+              'Error loading challenges',
+              style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+            ),
           ),
         ),
       ),
       floatingActionButton: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+          gradient: const LinearGradient(
+            colors: [AppTheme.primary, AppTheme.primaryDark],
+          ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: AppTheme.primary.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6)),
+            BoxShadow(
+              color: AppTheme.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
         child: FloatingActionButton.extended(
@@ -209,13 +239,22 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
           backgroundColor: Colors.transparent,
           elevation: 0,
           icon: const Icon(Icons.add_rounded, color: Colors.white),
-          label: Text('New Challenge', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+          label: Text(
+            'New Challenge',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildChallengeList(List<dynamic> challenges, {required bool isReceived}) {
+  Widget _buildChallengeList(
+    List<dynamic> challenges, {
+    required bool isReceived,
+  }) {
     if (challenges.isEmpty) {
       return Center(
         child: Padding(
@@ -238,15 +277,22 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
               const SizedBox(height: 20),
               Text(
                 isReceived ? 'No Challenges Received' : 'No Challenges Sent',
-                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                isReceived 
-                  ? 'When friends challenge you, they\'ll appear here'
-                  : 'Challenge your friends to a quiz duel!',
+                isReceived
+                    ? 'When friends challenge you, they\'ll appear here'
+                    : 'Challenge your friends to a quiz duel!',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textSecondary),
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                ),
               ),
             ],
           ),
@@ -268,14 +314,17 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
     );
   }
 
-  Widget _buildChallengeCard(Map<String, dynamic> challenge, {required bool isReceived}) {
+  Widget _buildChallengeCard(
+    Map<String, dynamic> challenge, {
+    required bool isReceived,
+  }) {
     final challenger = challenge['challenger'] ?? {};
     final settings = challenge['settings'] ?? {};
-    final challengerName = challenger['fullName'] ?? challenger['username'] ?? 'Unknown';
+    final challengerName =
+        challenger['fullName'] ?? challenger['username'] ?? 'Unknown';
     final topicName = settings['topicName'] ?? 'General';
     final difficulty = settings['difficulty'] ?? 'medium';
     final questionCount = settings['questionCount'] ?? 5;
-    final createdAt = challenge['createdAt'];
 
     Color diffColor;
     if (difficulty == 'easy') {
@@ -305,16 +354,20 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
                 height: 48,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: isReceived 
-                      ? [AppTheme.accent, const Color(0xFF00C7B1)]
-                      : [AppTheme.primary, AppTheme.primaryDark],
+                    colors: isReceived
+                        ? [AppTheme.accent, const Color(0xFF00C7B1)]
+                        : [AppTheme.primary, AppTheme.primaryDark],
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
                   child: Text(
                     challengerName[0].toUpperCase(),
-                    style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20),
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                    ),
                   ),
                 ),
               ),
@@ -325,24 +378,38 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
                   children: [
                     Text(
                       isReceived ? 'Challenge from' : 'Challenge to',
-                      style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                     Text(
                       challengerName,
-                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: diffColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   difficulty.toString().toUpperCase(),
-                  style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600, color: diffColor),
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: diffColor,
+                  ),
                 ),
               ),
             ],
@@ -366,18 +433,27 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
                   child: OutlinedButton(
                     onPressed: () => _declineChallenge(challenge['id']),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.3)),
+                      side: BorderSide(
+                        color: AppTheme.textMuted.withValues(alpha: 0.3),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text('Decline', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+                    child: Text(
+                      'Decline',
+                      style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [AppTheme.accent, Color(0xFF00C7B1)]),
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.accent, Color(0xFF00C7B1)],
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Material(
@@ -390,7 +466,10 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
                           child: Center(
                             child: Text(
                               'Accept & Play',
-                              style: GoogleFonts.outfit(color: Colors.black87, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.outfit(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -408,7 +487,10 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
                 const SizedBox(width: 6),
                 Text(
                   'Waiting for response...',
-                  style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.tertiary),
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: AppTheme.tertiary,
+                  ),
                 ),
               ],
             ),
@@ -430,7 +512,13 @@ class _PendingChallengesScreenState extends ConsumerState<PendingChallengesScree
         children: [
           Icon(icon, size: 14, color: AppTheme.textMuted),
           const SizedBox(width: 6),
-          Text(text, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary)),
+          Text(
+            text,
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              color: AppTheme.textSecondary,
+            ),
+          ),
         ],
       ),
     );

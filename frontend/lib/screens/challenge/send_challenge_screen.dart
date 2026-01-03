@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme.dart';
 import '../../core/services/api_service.dart';
-import '../../core/services/friend_service.dart';
 import '../friends/friends_screen.dart';
 
 // Challenge provider

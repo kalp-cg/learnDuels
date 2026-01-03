@@ -407,13 +407,11 @@ class _TopicSelectionScreenState extends ConsumerState<TopicSelectionScreen> {
         }
       } else {
         // Quick Match Mode (Socket Queue)
-        ref
-            .read(duelStateProvider.notifier)
-            .joinQueue(selectedCategoryId!);
-            
+        ref.read(duelStateProvider.notifier).joinQueue(selectedCategoryId!);
+
         // Wait a bit or Just Navigate - DuelScreen will show waiting state
         if (mounted) {
-           Navigator.pushNamed(context, '/duel');
+          Navigator.pushNamed(context, '/duel');
         }
       }
     } catch (e) {
@@ -524,8 +522,9 @@ class _TopicSelectionScreenState extends ConsumerState<TopicSelectionScreen> {
     if (name.contains('art')) return Icons.palette_rounded;
     if (name.contains('music')) return Icons.music_note_rounded;
     if (name.contains('sport')) return Icons.sports_rounded;
-    if (name.contains('tech') || name.contains('computer'))
+    if (name.contains('tech') || name.contains('computer')) {
       return Icons.computer_rounded;
+    }
     if (name.contains('biology')) return Icons.biotech_rounded;
     if (name.contains('chemistry')) return Icons.science_rounded;
     if (name.contains('physics')) return Icons.lightbulb_rounded;
