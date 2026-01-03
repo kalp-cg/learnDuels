@@ -267,7 +267,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
 
             const SizedBox(height: 24),
             if (_questions.isNotEmpty)

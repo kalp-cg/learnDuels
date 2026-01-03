@@ -16,7 +16,7 @@ final difficultiesProvider = FutureProvider<List<dynamic>>((ref) async {
   return [
     {'id': 1, 'name': 'Easy'},
     {'id': 2, 'name': 'Medium'},
-    {'id': 3, 'name': 'Hard'}
+    {'id': 3, 'name': 'Hard'},
   ];
 });
 
@@ -24,7 +24,8 @@ class CreateQuestionScreen extends ConsumerStatefulWidget {
   const CreateQuestionScreen({super.key});
 
   @override
-  ConsumerState<CreateQuestionScreen> createState() => _CreateQuestionScreenState();
+  ConsumerState<CreateQuestionScreen> createState() =>
+      _CreateQuestionScreenState();
 }
 
 class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
@@ -34,7 +35,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
   final _optionBController = TextEditingController();
   final _optionCController = TextEditingController();
   final _optionDController = TextEditingController();
-  
+
   String? _selectedCorrectOption;
   int? _selectedTopicId;
   int? _selectedDifficultyId;
@@ -53,7 +54,9 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
 
   Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedTopicId == null || _selectedDifficultyId == null || _selectedCorrectOption == null) {
+      if (_selectedTopicId == null ||
+          _selectedDifficultyId == null ||
+          _selectedCorrectOption == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -66,16 +69,18 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         return;
       }
 
-      final success = await ref.read(createQuestionControllerProvider.notifier).createQuestion(
-        questionText: _questionController.text,
-        optionA: _optionAController.text,
-        optionB: _optionBController.text,
-        optionC: _optionCController.text,
-        optionD: _optionDController.text,
-        correctOption: _selectedCorrectOption!,
-        categoryId: _selectedTopicId!,
-        difficultyId: _selectedDifficultyId!,
-      );
+      final success = await ref
+          .read(createQuestionControllerProvider.notifier)
+          .createQuestion(
+            questionText: _questionController.text,
+            optionA: _optionAController.text,
+            optionB: _optionBController.text,
+            optionC: _optionCController.text,
+            optionD: _optionDController.text,
+            correctOption: _selectedCorrectOption!,
+            categoryId: _selectedTopicId!,
+            difficultyId: _selectedDifficultyId!,
+          );
 
       if (success && mounted) {
         // Show success dialog then navigate to home
@@ -84,7 +89,9 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             backgroundColor: AppTheme.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -206,8 +213,8 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
           ),
         );
       } else if (mounted) {
-         final error = ref.read(createQuestionControllerProvider).error;
-         ScaffoldMessenger.of(context).showSnackBar(
+        final error = ref.read(createQuestionControllerProvider).error;
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               'Failed: $error',
@@ -233,7 +240,10 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppTheme.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -272,7 +282,9 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                       ],
                     ),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: AppTheme.accent.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -304,7 +316,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Question field
                 CustomTextField(
                   label: 'Question',
@@ -312,12 +324,13 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                   controller: _questionController,
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Required';
-                    if (v.length < 5) return 'Question must be at least 5 characters';
+                    if (v.length < 5)
+                      return 'Question must be at least 5 characters';
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Topics Dropdown
                 _buildDropdownLabel('Topic'),
                 const SizedBox(height: 8),
@@ -330,7 +343,9 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                         value: t['id'],
                         child: Text(
                           t['name'],
-                          style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                          style: GoogleFonts.outfit(
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
                       );
                     }).toList(),
@@ -350,10 +365,14 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                     hint: 'Select difficulty',
                     items: diffs.map<DropdownMenuItem<int>>((d) {
                       Color diffColor;
-                      if (d['id'] == 1) diffColor = AppTheme.success;
-                      else if (d['id'] == 2) diffColor = AppTheme.tertiary;
-                      else diffColor = AppTheme.secondary;
-                      
+                      if (d['id'] == 1) {
+                        diffColor = AppTheme.success;
+                      } else if (d['id'] == 2) {
+                        diffColor = AppTheme.tertiary;
+                      } else {
+                        diffColor = AppTheme.secondary;
+                      }
+
                       return DropdownMenuItem<int>(
                         value: d['id'],
                         child: Row(
@@ -369,23 +388,27 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                             const SizedBox(width: 10),
                             Text(
                               d['name'],
-                              style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                              style: GoogleFonts.outfit(
+                                color: AppTheme.textPrimary,
+                              ),
                             ),
                           ],
                         ),
                       );
                     }).toList(),
-                    onChanged: (val) => setState(() => _selectedDifficultyId = val),
+                    onChanged: (val) =>
+                        setState(() => _selectedDifficultyId = val),
                   ),
                   loading: () => _buildLoadingDropdown(),
-                  error: (e, s) => _buildErrorText('Error loading difficulties'),
+                  error: (e, s) =>
+                      _buildErrorText('Error loading difficulties'),
                 ),
                 const SizedBox(height: 28),
 
                 // Options Section
                 _buildSectionTitle('Answer Options'),
                 const SizedBox(height: 16),
-                
+
                 CustomTextField(
                   label: 'Option A',
                   controller: _optionAController,
@@ -421,18 +444,25 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                 _buildDropdown<String>(
                   value: _selectedCorrectOption,
                   hint: 'Select the correct option',
-                  items: _options.map((o) => DropdownMenuItem(
-                    value: o,
-                    child: Text(
-                      'Option $o',
-                      style: GoogleFonts.outfit(color: AppTheme.textPrimary),
-                    ),
-                  )).toList(),
-                  onChanged: (val) => setState(() => _selectedCorrectOption = val),
+                  items: _options
+                      .map(
+                        (o) => DropdownMenuItem(
+                          value: o,
+                          child: Text(
+                            'Option $o',
+                            style: GoogleFonts.outfit(
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) =>
+                      setState(() => _selectedCorrectOption = val),
                 ),
 
                 const SizedBox(height: 36),
-                
+
                 // Submit Button
                 Container(
                   decoration: BoxDecoration(
@@ -483,7 +513,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                                       ),
                                     ),
                                   ],
-                              ),
+                                ),
                         ),
                       ),
                     ),
@@ -546,23 +576,20 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
       ),
       child: DropdownButtonFormField<T>(
-        value: value,
-        hint: Text(
-          hint,
-          style: GoogleFonts.outfit(color: AppTheme.textMuted),
-        ),
+        initialValue: value,
+        hint: Text(hint, style: GoogleFonts.outfit(color: AppTheme.textMuted)),
         items: items,
         onChanged: onChanged,
         dropdownColor: AppTheme.surfaceLight,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textMuted),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppTheme.textMuted,
+        ),
         decoration: const InputDecoration(
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        style: GoogleFonts.outfit(
-          color: AppTheme.textPrimary,
-          fontSize: 15,
-        ),
+        style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 15),
       ),
     );
   }
@@ -597,10 +624,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
       ),
       child: Center(
-        child: Text(
-          text,
-          style: GoogleFonts.outfit(color: AppTheme.error),
-        ),
+        child: Text(text, style: GoogleFonts.outfit(color: AppTheme.error)),
       ),
     );
   }

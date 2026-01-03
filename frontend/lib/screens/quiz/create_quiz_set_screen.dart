@@ -7,20 +7,22 @@ import '../../core/theme.dart';
 import '../../core/services/api_service.dart';
 
 // Provider for fetching available questions
-final availableQuestionsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+final availableQuestionsProvider = FutureProvider.autoDispose<List<dynamic>>((
+  ref,
+) async {
   final api = ApiService();
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  
+
   if (token == null) return [];
-  
+
   try {
     final response = await api.client.get(
       '/questions',
       queryParameters: {'status': 'published', 'limit': 100},
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    
+
     if (response.data['success'] == true) {
       return response.data['data'] ?? [];
     }
@@ -35,7 +37,8 @@ class CreateQuizSetScreen extends ConsumerStatefulWidget {
   const CreateQuizSetScreen({super.key});
 
   @override
-  ConsumerState<CreateQuizSetScreen> createState() => _CreateQuizSetScreenState();
+  ConsumerState<CreateQuizSetScreen> createState() =>
+      _CreateQuizSetScreenState();
 }
 
 class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
@@ -56,7 +59,10 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please enter a name for the quiz', style: GoogleFonts.outfit()),
+          content: Text(
+            'Please enter a name for the quiz',
+            style: GoogleFonts.outfit(),
+          ),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -66,7 +72,10 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
     if (_selectedQuestionIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please select at least one question', style: GoogleFonts.outfit()),
+          content: Text(
+            'Please select at least one question',
+            style: GoogleFonts.outfit(),
+          ),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -97,7 +106,9 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             backgroundColor: AppTheme.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -107,18 +118,29 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                     color: AppTheme.success.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 60),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppTheme.success,
+                    size: 60,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   'Quiz Created!',
-                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                  style: GoogleFonts.outfit(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Your quiz set "${_nameController.text}" with ${_selectedQuestionIds.length} questions has been created successfully.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textSecondary),
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -131,9 +153,14 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text('Done', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Done',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ],
@@ -145,7 +172,10 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create quiz: $e', style: GoogleFonts.outfit()),
+            content: Text(
+              'Failed to create quiz: $e',
+              style: GoogleFonts.outfit(),
+            ),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -165,12 +195,19 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
         backgroundColor: AppTheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppTheme.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Create Quiz Set',
-          style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700),
+          style: GoogleFonts.outfit(
+            color: AppTheme.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         centerTitle: true,
       ),
@@ -198,7 +235,9 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                       labelText: 'Quiz Name',
                       labelStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
                       hintText: 'e.g., Science Basics Quiz',
-                      hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                      hintStyle: GoogleFonts.outfit(
+                        color: AppTheme.textMuted.withValues(alpha: 0.5),
+                      ),
                       filled: true,
                       fillColor: AppTheme.surfaceLight,
                       border: OutlineInputBorder(
@@ -222,7 +261,9 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                       labelText: 'Description (optional)',
                       labelStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
                       hintText: 'A short description of this quiz...',
-                      hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                      hintStyle: GoogleFonts.outfit(
+                        color: AppTheme.textMuted.withValues(alpha: 0.5),
+                      ),
                       filled: true,
                       fillColor: AppTheme.surfaceLight,
                       border: OutlineInputBorder(
@@ -235,7 +276,10 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
 
                   // Visibility toggle
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceLight,
                       borderRadius: BorderRadius.circular(12),
@@ -246,20 +290,27 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                         Row(
                           children: [
                             Icon(
-                              _isPublic ? Icons.public_rounded : Icons.lock_rounded,
-                              color: _isPublic ? AppTheme.success : AppTheme.textMuted,
+                              _isPublic
+                                  ? Icons.public_rounded
+                                  : Icons.lock_rounded,
+                              color: _isPublic
+                                  ? AppTheme.success
+                                  : AppTheme.textMuted,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               _isPublic ? 'Public Quiz' : 'Private Quiz',
-                              style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                              style: GoogleFonts.outfit(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
                         Switch(
                           value: _isPublic,
                           onChanged: (v) => setState(() => _isPublic = v),
-                          activeColor: AppTheme.success,
+                          activeThumbColor: AppTheme.success,
                         ),
                       ],
                     ),
@@ -272,14 +323,21 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                     children: [
                       Text(
                         'Select Questions',
-                        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: _selectedQuestionIds.isNotEmpty 
-                            ? AppTheme.primary.withValues(alpha: 0.2) 
-                            : AppTheme.surfaceLight,
+                          color: _selectedQuestionIds.isNotEmpty
+                              ? AppTheme.primary.withValues(alpha: 0.2)
+                              : AppTheme.surfaceLight,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
@@ -287,7 +345,9 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: _selectedQuestionIds.isNotEmpty ? AppTheme.primary : AppTheme.textMuted,
+                            color: _selectedQuestionIds.isNotEmpty
+                                ? AppTheme.primary
+                                : AppTheme.textMuted,
                           ),
                         ),
                       ),
@@ -303,7 +363,12 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                 data: (questions) {
                   if (questions.isEmpty) {
                     return Center(
-                      child: Text('No questions available', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+                      child: Text(
+                        'No questions available',
+                        style: GoogleFonts.outfit(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
                     );
                   }
                   return ListView.builder(
@@ -313,7 +378,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                       final q = questions[index];
                       final id = q['id'] as int;
                       final isSelected = _selectedQuestionIds.contains(id);
-                      
+
                       return GestureDetector(
                         onTap: () {
                           setState(() {
@@ -328,12 +393,14 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: isSelected 
-                              ? AppTheme.primary.withValues(alpha: 0.1)
-                              : AppTheme.surfaceLight,
+                            color: isSelected
+                                ? AppTheme.primary.withValues(alpha: 0.1)
+                                : AppTheme.surfaceLight,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected ? AppTheme.primary : AppTheme.border.withValues(alpha: 0.2),
+                              color: isSelected
+                                  ? AppTheme.primary
+                                  : AppTheme.border.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
@@ -353,7 +420,9 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                               ),
                               Expanded(
                                 child: Text(
-                                  q['content'] ?? q['questionText'] ?? 'Question',
+                                  q['content'] ??
+                                      q['questionText'] ??
+                                      'Question',
                                   style: GoogleFonts.outfit(
                                     fontSize: 14,
                                     color: AppTheme.textPrimary,
@@ -363,14 +432,20 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppTheme.surface,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   q['difficulty'] ?? 'medium',
-                                  style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted),
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    color: AppTheme.textMuted,
+                                  ),
                                 ),
                               ),
                             ],
@@ -380,9 +455,14 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppTheme.primary),
+                ),
                 error: (e, s) => Center(
-                  child: Text('Error loading questions', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+                  child: Text(
+                    'Error loading questions',
+                    style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+                  ),
                 ),
               ),
             ),
@@ -394,12 +474,22 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   gradient: _selectedQuestionIds.isNotEmpty
-                      ? const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark])
+                      ? const LinearGradient(
+                          colors: [AppTheme.primary, AppTheme.primaryDark],
+                        )
                       : null,
-                  color: _selectedQuestionIds.isEmpty ? AppTheme.surfaceLight : null,
+                  color: _selectedQuestionIds.isEmpty
+                      ? AppTheme.surfaceLight
+                      : null,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: _selectedQuestionIds.isNotEmpty
-                      ? [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))]
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primary.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
                       : null,
                 ),
                 child: Material(
@@ -414,14 +504,19 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                             ? const SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               )
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
                                     Icons.add_box_rounded,
-                                    color: _selectedQuestionIds.isNotEmpty ? Colors.white : AppTheme.textMuted,
+                                    color: _selectedQuestionIds.isNotEmpty
+                                        ? Colors.white
+                                        : AppTheme.textMuted,
                                   ),
                                   const SizedBox(width: 10),
                                   Text(
@@ -429,7 +524,9 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                                     style: GoogleFonts.outfit(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
-                                      color: _selectedQuestionIds.isNotEmpty ? Colors.white : AppTheme.textMuted,
+                                      color: _selectedQuestionIds.isNotEmpty
+                                          ? Colors.white
+                                          : AppTheme.textMuted,
                                     ),
                                   ),
                                 ],
