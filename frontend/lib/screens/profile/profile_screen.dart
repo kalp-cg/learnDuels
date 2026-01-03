@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../core/services/socket_service.dart';
 
 import '../duel/topic_selection_screen.dart';
 import 'edit_profile_screen.dart';
@@ -22,6 +23,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with AutomaticKeepAliveClientMixin {
   Timer? _refreshTimer;
+  late Function(dynamic) _notificationHandler;
 
   @override
   bool get wantKeepAlive => true; // Keep state when switching tabs
@@ -37,6 +39,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         _refreshData();
       }
     });
+
+    _notificationHandler = (data) {
+      if (data['type'] == 'follow_accepted' ||
+          data['type'] == 'follow_declined') {
+        if (mounted) {
+          // If viewing the profile of the person who accepted/declined
+          if (!isCurrentUser && widget.userId == data['userId']) {
+            _refreshData();
+          }
+          // If viewing own profile, following count changed (only for accepted)
+          if (isCurrentUser && data['type'] == 'follow_accepted') {
+            _refreshData();
+          }
+        }
+      }
+    };
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupSocketListeners();
+    });
+  }
+
+  void _setupSocketListeners() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.on('notification', _notificationHandler);
   }
 
   void _refreshData() {
@@ -51,6 +78,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   void dispose() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.off('notification', _notificationHandler);
     _refreshTimer?.cancel();
     super.dispose();
   }
@@ -158,8 +187,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   }
                 }),
                 const SizedBox(height: 8),
-                _buildActionItem('Settings', Icons.settings_rounded, () {}),
-                const SizedBox(height: 8),
                 _buildActionItem('Logout', Icons.logout_rounded, () {
                   ref.read(authStateProvider.notifier).logout();
                   Navigator.pushReplacementNamed(context, '/login');
@@ -220,8 +247,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         const Spacer(),
         if (isCurrentUser) ...[
           IconButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/follow-requests');
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/follow-requests');
+              // Refresh profile data when returning (to update follower counts etc)
+              _refreshData();
             },
             icon: Icon(
               Icons.person_add_rounded,
