@@ -320,25 +320,78 @@ async function getRandomQuestions(filters = {}, count = 10) {
     // Since Prisma doesn't support ORDER BY RANDOM() easily across DBs
 
     let totalCount = await prisma.question.count({ where });
+    let questions = [];
 
-    // FALLBACK: If no questions found for specific difficulty, try ANY difficulty for this category
-    if (totalCount === 0 && where.difficulty) {
-      console.log(`No questions found for difficulty ${where.difficulty}, falling back to any difficulty.`);
-      delete where.difficulty;
-      totalCount = await prisma.question.count({ where });
+    // 1. Try to get questions with specific difficulty
+    if (totalCount > 0) {
+      const take = Math.min(count * 2, totalCount);
+      const skip = Math.max(0, Math.floor(Math.random() * (totalCount - take)));
+
+      questions = await prisma.question.findMany({
+        where,
+        take: take,
+        skip: skip,
+        include: {
+          topics: true,
+          author: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true
+            }
+          }
+        }
+      });
     }
 
-    const take = Math.min(count * 2, totalCount);
-    const skip = Math.max(0, Math.floor(Math.random() * (totalCount - take)));
+    // 2. If not enough questions, fetch from ANY difficulty to fill the quota
+    if (questions.length < count) {
+      console.log(`Not enough questions found for difficulty ${where.difficulty || 'any'} (Found: ${questions.length}, Needed: ${count}). Fetching more...`);
+      
+      // Exclude already fetched questions
+      const existingIds = questions.map(q => q.id);
+      
+      // Use base criteria (category only) without difficulty filter
+      const fallbackWhere = {
+        deletedAt: null,
+        status: 'published',
+        id: { notIn: existingIds }
+      };
 
-    const questions = await prisma.question.findMany({
-      where,
-      take: take,
-      skip: skip,
-      include: {
-        topics: true
+      if (categoryId) {
+        fallbackWhere.topics = {
+          some: {
+            topicId: parseInt(categoryId)
+          }
+        };
       }
-    });
+
+      const remainingCount = count - questions.length;
+      const fallbackTotal = await prisma.question.count({ where: fallbackWhere });
+      
+      if (fallbackTotal > 0) {
+           // Fetch more than needed to allow for some randomness
+           const take = Math.min(remainingCount * 2, fallbackTotal);
+           const skip = Math.max(0, Math.floor(Math.random() * (fallbackTotal - take)));
+
+           const moreQuestions = await prisma.question.findMany({
+              where: fallbackWhere,
+              take: take,
+              skip: skip,
+              include: {
+                  topics: true,
+                  author: {
+                      select: {
+                          id: true,
+                          fullName: true,
+                          username: true
+                      }
+                  }
+              }
+          });
+          questions = [...questions, ...moreQuestions];
+      }
+    }
 
     // Shuffle in memory
     const shuffled = questions.sort(() => 0.5 - Math.random());
