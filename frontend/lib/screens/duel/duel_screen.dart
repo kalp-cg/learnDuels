@@ -4,7 +4,6 @@ import 'dart:async'; // Added for Timer
 import '../../providers/duel_provider.dart';
 import '../../core/services/socket_service.dart';
 
-import '../chat/general_chat_screen.dart';
 import '../../core/services/saved_service.dart';
 
 class DuelScreen extends ConsumerStatefulWidget {
@@ -20,7 +19,6 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
   // State variables
   String? _selectedOption;
   bool _answered = false;
-  int? _lastKnownQuestionIndex;
   int? _lastShownQuestionId;
   bool _hasNavigated = false;
 
@@ -32,8 +30,6 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
   // Ideally this should be part of question data, but for now we default to false/unknown
   // or just let user toggle it (server handles check).
   bool _isSaved = false;
-  int?
-  _lastShownExplanationIndex; // Track which question we showed explanation for
   // int? _lastShownQuestionId; // Track current question ID to detect changes // This is now String? and moved up
 
   final Stopwatch _stopwatch = Stopwatch();
@@ -64,7 +60,6 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
         if (duelData == null || _hasNavigated) return;
 
         final currentIndex = duelData['currentQuestionIndex'] ?? 0;
-        final playerFinished = duelData['playerFinished'] == true;
         final status = duelData['status'];
 
         debugPrint(
@@ -92,18 +87,35 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
         }
         lastQuestionIndex = currentIndex;
 
-        // ONLY navigate when duel is actually completed (both players finished)
-        // Don't navigate when just this player finished
-        if (status == 'completed' && !_hasNavigated) {
+        // Navigate when duel is completed OR when this player finishes (waiting for opponent)
+        if ((status == 'completed' ||
+                status == 'left_early' ||
+                status == 'waiting_for_opponent') &&
+            !_hasNavigated) {
           _hasNavigated = true;
-          debugPrint('🏁 Duel completed - Navigating to results');
+          debugPrint('🏁 Duel finished/waiting - Navigating to results');
           Future.microtask(() {
             if (mounted) {
-              Navigator.pushReplacementNamed(
-                context,
-                '/result',
-                arguments: duelData['finalResults'] ?? duelData,
-              );
+              if (status == 'left_early') {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/home',
+                  (route) => false,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'You left the duel. Results will be sent later.',
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.pushReplacementNamed(
+                  context,
+                  '/result',
+                  arguments: duelData['finalResults'] ?? duelData,
+                );
+              }
             }
           });
         }
@@ -129,22 +141,6 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
       ref.read(duelStateProvider.notifier).loadDuel(id);
     } else {
       debugPrint('Error: Invalid duelId type: $duelId');
-    }
-  }
-
-  void _forceSync() {
-    if (!mounted) return;
-
-    debugPrint('🔄 Reloading duel state...');
-
-    // Simply reload the duel without complex logic
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map && args.containsKey('duelId')) {
-      final duelId = args['duelId'];
-      final id = duelId is int ? duelId : int.tryParse(duelId.toString());
-      if (id != null) {
-        ref.read(duelStateProvider.notifier).loadDuel(id);
-      }
     }
   }
 
@@ -196,12 +192,26 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
         "**${question['questionText']}**\n\n"
         "Options:\n${(question['options'] as List).map((o) => "- ${o['text']}").join('\n')}";
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => GeneralChatScreen(initialMessage: text),
-      ),
-    );
+    final socketService = ref.read(socketServiceProvider);
+
+    if (socketService.isConnected) {
+      socketService.emit('chat:send', {'message': text, 'type': 'text'});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Question shared to General Chat!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Not connected to chat server. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _clearSelection() {
@@ -268,99 +278,15 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
     );
   }
 
-  void _showExplanation(Map<String, dynamic> question, bool wasCorrect) {
-    final explanation = question['explanation'] ?? question['explanationText'];
-    if (explanation == null || explanation.toString().isEmpty) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: wasCorrect
-                        ? Colors.green.withValues(alpha: 0.15)
-                        : Colors.orange.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    wasCorrect
-                        ? Icons.check_circle_rounded
-                        : Icons.lightbulb_rounded,
-                    color: wasCorrect ? Colors.green : Colors.orange,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    wasCorrect ? 'Great job!' : 'Explanation',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                explanation.toString(),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text(
-                  'Got it!',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final duelState = ref.watch(duelStateProvider);
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
         // Show the same confirmation dialog as End Duel button
         final shouldPop = await showDialog<bool>(
           context: context,
@@ -385,13 +311,12 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
           ),
         );
 
-        if (shouldPop == true) {
+        if (shouldPop == true && context.mounted) {
           // Emit leave event
           final socketService = ref.read(socketServiceProvider);
           socketService.emit('duel:leave', {});
-          return true;
+          Navigator.of(context).pop();
         }
-        return false;
       },
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -409,6 +334,20 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
               data: (duelData) {
                 if (duelData == null) {
                   return _buildLoadingState('Initializing Duel...');
+                }
+
+                // Handle Queue Searching State
+                if (duelData['status'] == 'searching') {
+                  return _buildLoadingState(
+                    'Searching for opponent...',
+                    actionLabel: 'Cancel',
+                    onAction: () {
+                      ref
+                          .read(socketServiceProvider)
+                          .emitDuel('duel:leave_queue', {});
+                      Navigator.pop(context);
+                    },
+                  );
                 }
 
                 final playerFinished = duelData['playerFinished'] == true;
@@ -429,18 +368,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                 if (status == 'completed') {
                   debugPrint('🏁 Duel completed - Should navigate to results');
                   // Show loading with manual option in case navigation hangs
-                  return _buildLoadingState(
-                    'Duel Completed',
-                    actionLabel: 'Back to Home',
-                    onAction: () {
-                      // Safe exit to home screen clearing all history
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        '/home',
-                        (route) => false,
-                      );
-                    },
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 final questions = duelData['questions'] as List<dynamic>;
@@ -577,6 +505,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                           children: [
                             Text(
                               question['questionText'] ??
+                                  question['content'] ??
                                   'Question text missing',
                               style: Theme.of(context).textTheme.headlineMedium
                                   ?.copyWith(
@@ -585,6 +514,27 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                     fontSize: 22,
                                   ),
                             ),
+                            if (question['author'] != null) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.person_outline_rounded,
+                                    size: 14,
+                                    color: Theme.of(context).hintColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Contributed by: ${question['author']['fullName'] ?? question['author']['username'] ?? 'Unknown'}',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context).hintColor,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: 32),
                             ...((question['options'] as List<dynamic>?) ?? [])
                                 .asMap()
@@ -604,8 +554,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                     questionResult,
                                     question,
                                   );
-                                })
-                                .toList(),
+                                }),
                           ],
                         ),
                       ),
@@ -638,7 +587,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                   ),
                                   TextButton.icon(
                                     onPressed: () => _skipQuestion(
-                                      duelData['id'],
+                                      duelData['duelId'],
                                       question['id'],
                                     ),
                                     icon: const Icon(Icons.skip_next),
@@ -668,7 +617,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                           .read(duelStateProvider.notifier)
                                           .submitAnswer(
                                             int.parse(
-                                              duelData['id'].toString(),
+                                              duelData['duelId'].toString(),
                                             ),
                                             question['id'],
                                             _selectedOption!,
@@ -715,12 +664,25 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                 );
               },
               loading: () => _buildLoadingState('Loading Duel...'),
-              error: (err, stack) => Center(
-                child: Text(
-                  'Error: $err',
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
+              error: (err, stack) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $err'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    Navigator.pop(context);
+                  }
+                });
+                return Center(
+                  child: Text(
+                    'Error: $err',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              },
             ), // Close duelState.when
           ), // Close SafeArea
         ), // Close Container
@@ -821,13 +783,10 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
             const SizedBox(height: 32),
             OutlinedButton.icon(
               onPressed: () {
-                // Use the early leave functionality
-                final socketService = ref.read(socketServiceProvider);
-                socketService.emit('duel:leave_early', {});
-                Navigator.pushReplacementNamed(context, '/home');
+                ref.read(duelStateProvider.notifier).leaveEarly();
               },
               icon: const Icon(Icons.exit_to_app),
-              label: const Text('Leave Now'),
+              label: const Text('Leave & Get Results Later'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,

@@ -30,37 +30,34 @@ class DuelNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
   }
 
   void _setupSocketListeners() {
-    // ==================== DUEL EVENTS (Legacy/Custom Rooms) ====================
-    _socketService.on('duel:started', (data) {
-      debugPrint('Duel started: $data');
+    // ==================== DUEL EVENTS (Standardized) ====================
+
+    // Game Start (Both Async and Instant)
+    _socketService.onDuel('startDuel', (data) {
+      debugPrint('⚔️ Duel started (startDuel): $data');
       _handleDuelStarted(data);
     });
 
-    // ==================== CHALLENGE EVENTS (Instant Duels) ====================
-    _socketService.on('challenge:started', (data) {
-      debugPrint('Challenge started: $data');
+    // Game Start (Room Code Flow)
+    _socketService.onDuel('duel:started', (data) {
+      debugPrint('⚔️ Duel started (duel:started): $data');
       _handleDuelStarted(data);
     });
 
-    // ASYNC FLOW: Immediate answer result for THIS player
-    _socketService.on('duel:answer_result', (data) {
-      debugPrint('Answer result: $data');
-      _handleAnswerResult(data);
-    });
+    // Answer Result (Immediate feedback for THIS player)
+    _socketService.onDuel('duel:answer_result', (data) {
+      debugPrint('✅ Answer result: $data');
 
-    _socketService.on('challenge:answer_recorded', (data) {
-      debugPrint('Challenge answer recorded: $data');
-      // Map challenge answer data to provider format
       final resultData = {
         'isCorrect': data['isCorrect'],
         'correctAnswer': data['correctAnswer'],
         'currentScore': data['currentScore'],
+        'isSkipped': data['isSkipped'] ?? false,
       };
-      
+
       _handleAnswerResult(resultData);
-      
-      // CRITICAL FIX: Also set questionResult so UI knows processing is done
-      // For challenges, immediate feedback is allowed
+
+      // Update state with result
       state = AsyncValue.data({
         ...?state.value,
         'questionResult': resultData,
@@ -69,108 +66,98 @@ class DuelNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
       });
     });
 
-    // ASYNC FLOW: Next question for THIS player (independent progression)
-    _socketService.on('duel:next_question', (data) {
-      debugPrint('Next Question: $data');
+    // Next Question (For THIS player)
+    _socketService.onDuel('duel:next_question', (data) {
+      debugPrint('⏭️ Next Question: $data');
       _handleNextQuestion(data);
     });
 
-    _socketService.on('challenge:next_question', (data) {
-      debugPrint('Challenge Next Question: $data');
-      _handleNextQuestion({
-        'questionIndex':
-            data['questionNumber'] - 1, // backend sends 1-based usually
-        'question': data['question'],
-      });
-    });
-
-    // ASYNC FLOW: Player finished all questions
-    _socketService.on('duel:player_finished', (data) {
-      debugPrint('Player finished: $data');
-      _handlePlayerFinished(data);
-    });
-
-    _socketService.on('duel:question', (data) {
-      debugPrint('New Question: $data');
-      _handleNextQuestion(data);
-    });
-
-    _socketService.on('duel:opponent_answered', (data) {
-      debugPrint('Opponent answered: $data');
+    // Opponent Progress (Real-time updates)
+    _socketService.onDuel('duel:opponent_answered', (data) {
+      debugPrint('🆚 Opponent answered: $data');
       _handleOpponentAnswered(data);
     });
 
-    _socketService.on('challenge:opponent_answered', (data) {
-      debugPrint('Challenge opponent answered: $data');
-      _handleOpponentAnswered({
-        'opponentProgress':
-            data['questionNumber'], // backend sends current question number
-      });
+    // Player Finished
+    _socketService.onDuel('duel:player_finished', (data) {
+      debugPrint('🏁 Player finished: $data');
+      _handlePlayerFinished(data);
     });
 
-    _socketService.on('duel:question_result', (data) {
-      debugPrint('Question result: $data');
-      final currentData = state.value;
-      if (currentData != null) {
-        state = AsyncValue.data({
-          ...currentData,
-          'questionResult': data['results'],
-          'currentScores': data['currentScores'],
-        });
-      }
+    // Duel Ended (Both finished)
+    _socketService.onDuel('duel:completed', (data) {
+      debugPrint('🏆 Duel completed: $data');
+      _handleDuelEnded(data);
     });
 
-    _socketService.on('duel:completed', (data) {
-      debugPrint('Duel completed: $data');
-      _handleDuelCompleted(data);
+    // Left Early
+    _socketService.onDuel('duel:left_early', (data) {
+      debugPrint('👋 Left early: $data');
+      _handleLeftEarly(data);
     });
 
-    _socketService.on('challenge:completed', (data) {
-      debugPrint('Challenge completed: $data');
-      _handleDuelCompleted(data);
+    // Opponent Left Early
+    _socketService.onDuel('duel:opponent_left_early', (data) {
+      debugPrint('🏃 Opponent left early: $data');
+      // Just show a toast or update state if needed
     });
 
-    _socketService.on('duel:room_created', (data) {
-      debugPrint('Room created: $data');
-      _ref.read(roomCodeProvider.notifier).state = data['roomId']?.toString();
+    // Room Created
+    _socketService.onDuel('duel:room_created', (data) {
+      debugPrint('🏠 Room created: $data');
+      _handleRoomCreated(data);
     });
 
-    _socketService.on('duel:join_room_request', (data) {
-      debugPrint('Join room request: $data');
-      _socketService.emit('duel:join_room_ack', {'roomId': data['roomId']});
-    });
-
-    // Rematch feature removed
-
-    _socketService.on('duel:error', (data) {
-      debugPrint('Duel Error: $data');
-    });
-
-    _socketService.on('challenge:error', (data) {
-      debugPrint('Challenge Error: $data');
+    // Error Handling
+    _socketService.onDuel('duel:error', (data) {
+      debugPrint('❌ Duel error: $data');
+      state = AsyncValue.error(
+        data['message'] ?? 'An error occurred',
+        StackTrace.current,
+      );
     });
   }
 
-  // Helper methods to handle shared logic
+  @override
+  void dispose() {
+    _socketService.offDuel('startDuel');
+    _socketService.offDuel('duel:started');
+    _socketService.offDuel('duel:answer_result');
+    _socketService.offDuel('duel:next_question');
+    _socketService.offDuel('duel:opponent_answered');
+    _socketService.offDuel('duel:player_finished');
+    _socketService.offDuel('duel:completed');
+    _socketService.offDuel('duel:room_created');
+    super.dispose();
+  }
+
+  // ==================== HANDLERS ====================
+
+  void _handleRoomCreated(dynamic data) {
+    _ref.read(roomCodeProvider.notifier).state = data['roomId'];
+  }
+
   void _handleDuelStarted(dynamic data) {
-    // Ensure required fields are properly initialized
-    final duelData = Map<String, dynamic>.from(data);
-    duelData['id'] =
-        duelData['duelId'] ?? duelData['challengeId'] ?? duelData['id'];
-    duelData['currentQuestionIndex'] = 0;
-    duelData['isOpponentAnswered'] = false;
-    duelData['questionResult'] = null;
+    // Map backend data to frontend state
+    final questions = data['questions'] ?? [];
+    final firstQuestion = data['firstQuestion'];
 
-    // CRITICAL: Set roomCode so socket is used for answer submission
-    // Convert roomId to String explicitly (backend may send as int)
-    final roomIdRaw = duelData['roomId'];
-    if (roomIdRaw != null) {
-      final roomId = roomIdRaw is String ? roomIdRaw : roomIdRaw.toString();
-      _ref.read(roomCodeProvider.notifier).state = roomId;
-      debugPrint('✅ Room code set: $roomId');
-    }
-
-    state = AsyncValue.data(duelData);
+    state = AsyncValue.data({
+      'status': 'active',
+      'duelId': data['duelId'],
+      'roomId': data['roomId'],
+      'questions': questions,
+      'totalQuestions': questions.length,
+      'currentQuestionIndex': 0,
+      'currentQuestion':
+          firstQuestion?['question'] ??
+          (questions.isNotEmpty ? questions[0] : null),
+      'currentScore': 0,
+      'opponentScore': 0,
+      'opponentProgress': 0,
+      'timeLimit': firstQuestion?['timeLimit'] ?? 30,
+      'startTime': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   void _handleAnswerResult(dynamic data) {
@@ -178,8 +165,8 @@ class DuelNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
     if (currentData != null) {
       state = AsyncValue.data({
         ...currentData,
-        'lastAnswerResult': data,
-        'currentScore': data['currentScore'] ?? currentData['currentScore'],
+        'questionResult': data,
+        'currentScore': data['currentScore'],
       });
     }
   }
@@ -190,20 +177,9 @@ class DuelNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
       state = AsyncValue.data({
         ...currentData,
         'currentQuestionIndex': data['questionIndex'],
-        'isOpponentAnswered': false,
-        'questionResult': null,
-        'lastAnswerResult': null, // Clear previous result
-      });
-    }
-  }
-
-  void _handlePlayerFinished(dynamic data) {
-    final currentData = state.value;
-    if (currentData != null) {
-      state = AsyncValue.data({
-        ...currentData,
-        'playerFinished': true,
-        'currentScore': data['yourScore'],
+        'currentQuestion': data['question'],
+        'timeLimit': data['timeLimit'] ?? 30,
+        'questionResult': null, // Clear previous result
       });
     }
   }
@@ -213,132 +189,107 @@ class DuelNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
     if (currentData != null) {
       state = AsyncValue.data({
         ...currentData,
-        'isOpponentAnswered': true,
         'opponentProgress': data['opponentProgress'],
+        'opponentScore': data['opponentScore'] ?? currentData['opponentScore'],
       });
     }
   }
 
-  void _handleDuelCompleted(dynamic data) {
+  void _handlePlayerFinished(dynamic data) {
+    final currentData = state.value;
+    if (currentData != null) {
+      state = AsyncValue.data({
+        ...currentData,
+        'status': 'waiting_for_opponent',
+        'finalScore': data['yourScore'],
+        'myStats': data['stats'], // Store stats
+      });
+    }
+  }
+
+  void _handleDuelEnded(dynamic data) {
     final currentData = state.value;
     if (currentData != null) {
       state = AsyncValue.data({
         ...currentData,
         'status': 'completed',
-        'finalResults': data,
+        'winnerId': data['winnerId'],
+        'finalScores': data['scores'],
+        'finalResults': data, // Store full results
       });
     }
   }
 
-  void createRoom(int categoryId, {int questionCount = 7}) {
-    _socketService.emit('duel:create_room', {
+  void _handleLeftEarly(dynamic data) {
+    final currentData = state.value;
+    if (currentData != null) {
+      state = AsyncValue.data({...currentData, 'status': 'left_early'});
+    }
+  }
+  // ==================== ACTIONS ====================
+
+  void loadDuel(int duelId) {
+    debugPrint('🔄 Loading Duel: $duelId');
+    state = const AsyncValue.loading();
+    _socketService.emitDuel('duel:load', {'duelId': duelId});
+  }
+
+  Future<void> sendChallenge(int opponentId, int categoryId) async {
+    debugPrint('📨 Sending Challenge to $opponentId for category $categoryId');
+    _socketService.emitDuel('invite', {
+      'opponentId': opponentId,
       'categoryId': categoryId,
-      'difficultyId': 1,
+    });
+  }
+
+  void joinQueue(int categoryId) {
+    debugPrint('🔍 Joining Queue for category $categoryId');
+    // Set state to searching so UI can show "Searching for opponent..."
+    state = const AsyncValue.data({'status': 'searching'});
+    _socketService.emitDuel('duel:join_queue', {'categoryId': categoryId});
+  }
+
+  void createRoom(int categoryId, {int questionCount = 5}) {
+    debugPrint('🏠 Creating Room: Cat=$categoryId, Count=$questionCount');
+    _socketService.emitDuel('duel:create_room', {
+      'categoryId': categoryId,
       'questionCount': questionCount,
+      'difficultyId': 1, // Default to medium
     });
   }
 
   void joinRoom(String roomId) {
-    _socketService.emit('duel:join_room', {'roomId': roomId});
+    debugPrint('👋 Joining Room: $roomId');
+    _socketService.emitDuel('duel:join_room', {'roomId': roomId});
   }
 
-  void loadDuel(int duelId) {
-    _socketService.emit('duel:load', {'duelId': duelId});
+  void reset() {
+    state = const AsyncValue.data(null);
+    _ref.read(roomCodeProvider.notifier).state = null;
   }
 
-  // Rematch methods removed - feature simplified
-
-  Future<void> sendChallenge(int opponentId, int categoryId) async {
-    state = AsyncValue.loading();
-    try {
-      await _duelService.createDuelChallenge(opponentId, categoryId);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  void joinQueue(int categoryId) {
-    state = AsyncValue.loading();
-    _socketService.emit('duel:join_queue', {'categoryId': categoryId});
-    // State will be updated when 'duel:started' is received
-  }
-
-  void leaveQueue() {
-    _socketService.emit('duel:leave_queue', {});
-    state = AsyncValue.data(null);
-  }
-
-  void setDuelData(Map<String, dynamic> data) {
-    state = AsyncValue.data(data);
+  void leaveEarly() {
+    debugPrint('👋 Leaving Duel Early');
+    _socketService.emitDuel('duel:leave_early', {});
   }
 
   Future<void> submitAnswer(
     int duelId,
     int questionId,
-    String? selectedOption, {
-    int timeUsed = 0,
+    String? answer, {
+    required int timeUsed,
   }) async {
-    // If we are in a socket-managed room, use socket to submit
-    // Room ID is usually managed via roomCodeProvider or within duelData
-    final roomId = _ref.read(roomCodeProvider);
-    if (roomId != null) {
-      if (roomId.startsWith('challenge_')) {
-        // Handle Instant Duel (Challenge Flow)
-        // roomId format: challenge_{challengeId}
-        final challengeId = int.tryParse(roomId.split('_')[1]) ?? duelId;
+    final currentData = state.value;
+    if (currentData == null) return;
 
-        _socketService.emit('challenge:answer', {
-          'challengeId': challengeId,
-          'questionId': questionId,
-          'selectedAnswer': selectedOption,
-          'timeTaken': timeUsed,
-        });
-      } else {
-        // Handle Standard Duel Flow
-        _socketService.emit('duel:submit_answer', {
-          'questionId': questionId,
-          'answer': selectedOption, // Can be null for skipped
-          'timeUsed': timeUsed,
-        });
-      }
-    } else {
-      // Fallback to REST if not in a real-time room
-      await _duelService.submitAnswer(duelId, questionId, selectedOption ?? '');
-    }
-  }
+    final roomId = currentData['roomId'];
 
-  @override
-  void dispose() {
-    debugPrint('🧹 Disposing DuelNotifier: Cleaning up socket listeners');
-    _cleanupSocketListeners();
-    super.dispose();
-  }
-
-  void _cleanupSocketListeners() {
-    final events = [
-      'duel:started',
-      'duel:question',
-      'duel:opponent_answered',
-      'duel:question_result',
-      'duel:completed',
-      'duel:room_created',
-      'duel:join_room_request',
-      'duel:error',
-      'challenge:started',
-      'challenge:answer_recorded',
-      'challenge:next_question',
-      'challenge:opponent_answered',
-      'challenge:completed',
-      'challenge:error',
-    ];
-
-    for (final event in events) {
-      _socketService.off(event);
-    }
-  }
-
-  void reset() {
-    state = AsyncValue.data(null);
-    _ref.read(roomCodeProvider.notifier).state = null;
+    // Emit to Duel Namespace
+    _socketService.emitDuel('duel:submit_answer', {
+      'roomId': roomId,
+      'questionId': questionId,
+      'answer': answer,
+      'timeUsed': timeUsed,
+    });
   }
 }
