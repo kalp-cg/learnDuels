@@ -8,6 +8,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const promBundle = require('express-prom-bundle');
 
 const config = require('./config/env');
 const { connectDatabase } = require('./config/db');
@@ -47,6 +48,20 @@ function createApp() {
   // Trust proxy for rate limiting and IP detection
   app.set('trust proxy', 1);
 
+  // Prometheus metrics middleware
+  const metricsMiddleware = promBundle({
+    includeMethod: true,
+    includePath: true,
+    includeStatusCode: true,
+    includeUp: true,
+    customLabels: { project_name: 'learnduels_backend' },
+    promClient: {
+      collectDefaultMetrics: {
+      }
+    }
+  });
+  app.use(metricsMiddleware);
+
   // Initialize Passport
   app.use(passport.initialize());
 
@@ -75,6 +90,19 @@ function createApp() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   }));
+
+  // Strict Rate Limiting for Auth Routes
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // Strict limit for auth endpoints
+    message: {
+      success: false,
+      message: 'Too many login attempts, please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api/auth', authLimiter);
 
   // Rate limiting - OPTIMIZED for 500-700 users
   const limiter = rateLimit({
@@ -190,6 +218,17 @@ function createApp() {
   app.use('/api/saved', savedRoutes);
   // Push notifications merged into notifications route
   app.use('/api/notifications', pushNotificationRoutes);
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      success: true,
+      message: 'LearnDuels API is healthy',
+      timestamp: new Date().toISOString(),
+      environment: config.NODE_ENV,
+      version: '1.0.0'
+    });
+  });
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);

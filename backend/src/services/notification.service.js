@@ -5,6 +5,7 @@
 
 const { prisma } = require('../config/db');
 const { createError } = require('../middlewares/error.middleware');
+const pushNotificationService = require('./push-notification.service');
 
 /**
  * Create notification
@@ -19,6 +20,23 @@ async function createNotification(userId, message, type = 'general', data = null
         data: data || {},
       },
     });
+
+    // Send Push Notification
+    try {
+      await pushNotificationService.sendToUser(parseInt(userId), {
+        title: 'LearnDuels',
+        body: message,
+        data: {
+          type,
+          notificationId: String(notification.id),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          ...(data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) : {})
+        }
+      });
+    } catch (pushError) {
+      console.error('Failed to send push notification:', pushError.message);
+      // Don't fail the main operation
+    }
 
     return notification;
   } catch (error) {

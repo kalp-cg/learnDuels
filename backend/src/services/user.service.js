@@ -71,12 +71,18 @@ async function getAllUsers(currentUserId, { page = 1, limit = 20, search = '', s
           },
         },
       });
+      
+      // Debug log for specific user check
+      // if (user.username === 'some_username') console.log(...) 
+
       return {
         ...user,
         isFollowing: follow?.status === 'accepted',
         followStatus: follow?.status || null,
       };
     }));
+
+    // console.log(`Returning ${usersWithStatus.length} users for ${currentUserId}`);
 
     return {
       users: usersWithStatus,
@@ -385,10 +391,12 @@ async function acceptFollowRequest(userId, followerId) {
     }
 
     // Update status to accepted
-    await prisma.userFollower.update({
+    const updated = await prisma.userFollower.update({
       where: { id: followRequest.id },
       data: { status: 'accepted' },
     });
+    
+    console.log(`✅ Follow request accepted: ${updated.id}, status: ${updated.status}`);
 
     // Create notification for follower
     const acceptedBy = await prisma.user.findUnique({
@@ -448,6 +456,19 @@ async function declineFollowRequest(userId, followerId) {
       where: { id: followRequest.id },
       data: { status: 'declined' },
     });
+
+    // Send real-time notification
+    try {
+      const { getIO, sendToUser } = require('../sockets/index');
+      const io = getIO();
+      sendToUser(io, followerId, 'notification', {
+        type: 'follow_declined',
+        message: 'Follow request declined',
+        userId: parseInt(userId),
+      });
+    } catch (socketError) {
+      console.error('Failed to send socket notification:', socketError);
+    }
 
     return { success: true, message: 'Follow request declined' };
   } catch (error) {
