@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../../core/services/user_service.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../core/theme.dart';
 import 'signup_screen.dart';
@@ -19,7 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -31,24 +33,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animController,
         curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
       ),
     );
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-      ),
-    );
-    
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+          ),
+        );
+
     _animController.forward();
   }
 
@@ -125,11 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              AppTheme.background,
-              Color(0xFF0F1228),
-              Color(0xFF151A36),
-            ],
+            colors: [AppTheme.background, Color(0xFF0F1228), Color(0xFF151A36)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -139,7 +135,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             children: [
               // Background effects
               _buildBackgroundEffects(),
-              
+
               // Main content
               Center(
                 child: SingleChildScrollView(
@@ -157,7 +153,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             // Logo with glow
                             _buildLogo(),
                             const SizedBox(height: 40),
-                            
+
                             // Welcome text
                             ShaderMask(
                               shaderCallback: (bounds) => const LinearGradient(
@@ -185,7 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 48),
-                            
+
                             // Email field
                             CustomTextField(
                               label: 'Email',
@@ -201,7 +197,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               },
                             ),
                             const SizedBox(height: 20),
-                            
+
                             // Password field
                             CustomTextField(
                               label: 'Password',
@@ -217,7 +213,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               },
                             ),
                             const SizedBox(height: 12),
-                            
+
                             // Forgot password
                             Align(
                               alignment: Alignment.centerRight,
@@ -226,7 +222,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const ForgotPasswordScreen(),
+                                      builder: (context) =>
+                                          const ForgotPasswordScreen(),
                                     ),
                                   );
                                 },
@@ -241,22 +238,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               ),
                             ),
                             const SizedBox(height: 24),
-                            
+
                             // Login button with gradient
                             _buildLoginButton(isLoading),
                             const SizedBox(height: 32),
-                            
+
                             // Divider
                             Row(
                               children: [
                                 Expanded(
                                   child: Container(
                                     height: 1,
-                                    color: AppTheme.border.withValues(alpha: 0.5),
+                                    color: AppTheme.border.withValues(
+                                      alpha: 0.5,
+                                    ),
                                   ),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
                                   child: Text(
                                     'or',
                                     style: GoogleFonts.outfit(
@@ -268,13 +269,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 Expanded(
                                   child: Container(
                                     height: 1,
-                                    color: AppTheme.border.withValues(alpha: 0.5),
+                                    color: AppTheme.border.withValues(
+                                      alpha: 0.5,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 28),
-                            
+
                             // Social login buttons
                             Row(
                               children: [
@@ -285,15 +288,165 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     label: 'Google',
                                     color: const Color(0xFFDB4437),
                                     onTap: () async {
-                                      // TODO: Implement Google OAuth
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Google login coming soon!',
-                                            style: GoogleFonts.outfit(),
-                                          ),
-                                        ),
+                                      debugPrint(
+                                        '🔵 Google Sign-In button pressed',
                                       );
+
+                                      // Try the ID from .env (Android Client ID?) or the Web one.
+                                      // We need the WEB Client ID here to get the idToken.
+                                      // If this fails with 10, it means the Android App (SHA-1) is not in the same project as this ID.
+                                      const webClientId =
+                                          '171390706156-at1fq98p1s6uhps2v31r5kq5eosb0u3c.apps.googleusercontent.com';
+
+                                      var googleSignIn = GoogleSignIn(
+                                        serverClientId: webClientId,
+                                        scopes: ['email', 'profile'],
+                                      );
+
+                                      try {
+                                        try {
+                                          await googleSignIn.disconnect();
+                                        } catch (_) {}
+                                        await googleSignIn.signOut();
+
+                                        GoogleSignInAccount? account;
+                                        try {
+                                          account = await googleSignIn.signIn();
+                                        } catch (e) {
+                                          debugPrint(
+                                            '⚠️ First attempt failed: $e',
+                                          );
+                                          if (e.toString().contains("10")) {
+                                            debugPrint(
+                                              '⚠️ ApiException: 10 detected. Retrying without serverClientId to diagnose...',
+                                            );
+                                            // Fallback: Try without serverClientId to see if basic auth works
+                                            // This helps us know if the SHA-1 is correct but the Web Client ID is wrong
+                                            googleSignIn = GoogleSignIn(
+                                              scopes: ['email', 'profile'],
+                                            );
+                                            account = await googleSignIn
+                                                .signIn();
+                                            if (account != null) {
+                                              debugPrint(
+                                                '⚠️ Basic Auth worked! The Web Client ID was wrong.',
+                                              );
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Setup Error: Web Client ID is invalid, but Android Auth is OK. Check Console.',
+                                                    ),
+                                                    backgroundColor:
+                                                        AppTheme.warning,
+                                                  ),
+                                                );
+                                              }
+                                              return;
+                                            }
+                                          } else {
+                                            rethrow;
+                                          }
+                                        }
+
+                                        if (account == null) {
+                                          debugPrint(
+                                            '⚪ User cancelled Google Sign-In',
+                                          );
+                                          return;
+                                        }
+
+                                        debugPrint(
+                                          '🟢 Google Sign-In success: ${account.email}',
+                                        );
+
+                                        // Get authentication tokens
+                                        final auth =
+                                            await account.authentication;
+                                        final idToken = auth.idToken;
+                                        final accessToken = auth.accessToken;
+
+                                        debugPrint(
+                                          '🔑 ID Token: ${idToken != null ? "Present" : "Missing"}',
+                                        );
+                                        debugPrint(
+                                          '🔑 Access Token: ${accessToken != null ? "Present" : "Missing"}',
+                                        );
+
+                                        if (idToken == null ||
+                                            accessToken == null) {
+                                          debugPrint(
+                                            '🔴 Missing Google tokens (ID: ${idToken != null}, Access: ${accessToken != null})',
+                                          );
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Failed to get Google tokens. Check Web Client ID configuration.',
+                                                ),
+                                                backgroundColor: AppTheme.error,
+                                              ),
+                                            );
+                                          }
+                                          return;
+                                        }
+
+                                        // Call backend to login/register
+                                        if (context.mounted) {
+                                          final success = await ref
+                                              .read(authStateProvider.notifier)
+                                              .loginWithGoogle(
+                                                idToken,
+                                                accessToken,
+                                              );
+
+                                          if (success) {
+                                            debugPrint(
+                                              '✅ Backend login success',
+                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Welcome ${account.displayName}!',
+                                                  ),
+                                                  backgroundColor:
+                                                      AppTheme.success,
+                                                ),
+                                              );
+                                              Navigator.of(
+                                                context,
+                                              ).pushReplacementNamed('/home');
+                                            }
+                                          } else {
+                                            debugPrint(
+                                              '❌ Backend login failed',
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        debugPrint(
+                                          '🔴 Google Sign-In error: $e',
+                                        );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Google sign-in error: $e',
+                                              ),
+                                              backgroundColor: AppTheme.error,
+                                            ),
+                                          );
+                                        }
+                                      }
                                     },
                                   ),
                                 ),
@@ -306,7 +459,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     color: const Color(0xFF333333),
                                     onTap: () async {
                                       // TODO: Implement GitHub OAuth
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
                                           content: Text(
                                             'GitHub login coming soon!',
@@ -320,7 +475,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               ],
                             ),
                             const SizedBox(height: 32),
-                            
+
                             // Sign up link
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -337,14 +492,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const SignupScreen(),
+                                        builder: (context) =>
+                                            const SignupScreen(),
                                       ),
                                     );
                                   },
                                   child: ShaderMask(
-                                    shaderCallback: (bounds) => const LinearGradient(
-                                      colors: [AppTheme.primary, AppTheme.accent],
-                                    ).createShader(bounds),
+                                    shaderCallback: (bounds) =>
+                                        const LinearGradient(
+                                          colors: [
+                                            AppTheme.primary,
+                                            AppTheme.accent,
+                                          ],
+                                        ).createShader(bounds),
                                     child: Text(
                                       'Sign Up',
                                       style: GoogleFonts.outfit(
@@ -489,11 +649,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ).createShader(bounds),
-          child: const Icon(
-            Icons.bolt_rounded,
-            size: 56,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.bolt_rounded, size: 56, color: Colors.white),
         ),
       ),
     );

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/nav_provider.dart';
-import '../providers/duel_provider.dart';
 import '../providers/notification_provider.dart';
 import '../core/services/socket_service.dart';
-import '../core/services/duel_service.dart';
+import '../core/services/push_notification_service.dart';
 import '../core/theme.dart';
 import 'home/home_screen.dart';
 import 'leaderboard/leaderboard_screen.dart';
@@ -24,28 +23,21 @@ class MainScreen extends ConsumerStatefulWidget {
 }
 
 class _MainScreenState extends ConsumerState<MainScreen> {
+  late Function(dynamic) _invitationHandler;
+  late Function(dynamic) _notificationHandler;
+  late Function(dynamic) _duelAcceptedHandler;
+  late Function(dynamic) _challengeStartedHandler;
+
   @override
   void initState() {
     super.initState();
-    // Initialize the provider with the passed index
-    Future.microtask(() {
-      ref.read(bottomNavIndexProvider.notifier).state = widget.initialIndex;
-      _initSocket();
-    });
-  }
 
-  void _initSocket() async {
-    final socketService = ref.read(socketServiceProvider);
-    await socketService.connect();
-
-    // Listen for invitations
-    socketService.on('duel:invitation_received', (data) {
+    _invitationHandler = (data) {
       if (!mounted) return;
       _showInvitationDialog(data);
-    });
+    };
 
-    // Listen for generic notifications
-    socketService.on('notification', (data) {
+    _notificationHandler = (data) {
       if (!mounted) return;
 
       // Increment unread count
@@ -63,9 +55,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             label: 'View',
             textColor: AppTheme.primary,
             onPressed: () {
-               Navigator.push(
+              Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const NotificationScreen(),
+                ),
               );
             },
           ),
@@ -73,19 +67,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       );
       // Refresh notification list if needed
       ref.invalidate(notificationsProvider);
-    });
+    };
 
-    // Listen for duel start (after acceptance)
-    socketService.on('duel:accepted', (data) {
+    _duelAcceptedHandler = (data) {
       if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const DuelScreen()),
       );
-    });
+    };
 
-    // Listen for challenge start (instant duel)
-    socketService.on('challenge:started', (data) {
+    _challengeStartedHandler = (data) {
       if (!mounted) return;
       // The data is already handled by DuelProvider which updates the state.
       // We just need to navigate.
@@ -93,13 +85,45 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         context,
         MaterialPageRoute(builder: (context) => const DuelScreen()),
       );
+    };
+
+    // Initialize the provider with the passed index
+    Future.microtask(() {
+      ref.read(bottomNavIndexProvider.notifier).state = widget.initialIndex;
+      _initSocket();
     });
+  }
+
+  void _initSocket() async {
+    final socketService = ref.read(socketServiceProvider);
+    await socketService.connect();
+
+    // Initialize Push Notifications
+    try {
+      await PushNotificationService().initialize();
+    } catch (e) {
+      debugPrint('Push notification init error: $e');
+    }
+
+    // Listen for invitations
+    socketService.on('duel:invitation_received', _invitationHandler);
+
+    // Listen for generic notifications
+    socketService.on('notification', _notificationHandler);
+
+    // Listen for duel start (after acceptance)
+    socketService.on('duel:accepted', _duelAcceptedHandler);
+
+    // Listen for challenge start (instant duel)
+    socketService.on('challenge:started', _challengeStartedHandler);
   }
 
   void _showInvitationDialog(dynamic data) {
     // Extract challenger name safely
-    final challengerName = data['challenger'] != null 
-        ? (data['challenger']['fullName'] ?? data['challenger']['username'] ?? 'Someone')
+    final challengerName = data['challenger'] != null
+        ? (data['challenger']['fullName'] ??
+              data['challenger']['username'] ??
+              'Someone')
         : 'Someone';
 
     showDialog(
@@ -116,7 +140,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 color: AppTheme.secondary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.sports_esports_rounded, color: AppTheme.secondary, size: 24),
+              child: const Icon(
+                Icons.sports_esports_rounded,
+                color: AppTheme.secondary,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Text(
@@ -190,8 +218,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   void dispose() {
     final socketService = ref.read(socketServiceProvider);
-    socketService.off('challenge:received');
-    socketService.off('duel:accepted');
+    socketService.off('duel:invitation_received', _invitationHandler);
+    socketService.off('notification', _notificationHandler);
+    socketService.off('duel:accepted', _duelAcceptedHandler);
+    socketService.off('challenge:started', _challengeStartedHandler);
     socketService.disconnect();
     super.dispose();
   }
@@ -215,7 +245,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         decoration: BoxDecoration(
           color: AppTheme.surface,
           border: Border(
-            top: BorderSide(color: AppTheme.border.withValues(alpha: 0.3), width: 1),
+            top: BorderSide(
+              color: AppTheme.border.withValues(alpha: 0.3),
+              width: 1,
+            ),
           ),
           boxShadow: [
             BoxShadow(
@@ -231,11 +264,41 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Home', currentIndex),
-                _buildNavItem(1, Icons.leaderboard_outlined, Icons.leaderboard_rounded, 'Rank', currentIndex),
-                _buildNavItem(2, Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chat', currentIndex),
-                _buildNavItem(3, Icons.people_outline, Icons.people_rounded, 'Friends', currentIndex),
-                _buildNavItem(4, Icons.person_outline, Icons.person_rounded, 'Profile', currentIndex),
+                _buildNavItem(
+                  0,
+                  Icons.home_outlined,
+                  Icons.home_rounded,
+                  'Home',
+                  currentIndex,
+                ),
+                _buildNavItem(
+                  1,
+                  Icons.leaderboard_outlined,
+                  Icons.leaderboard_rounded,
+                  'Rank',
+                  currentIndex,
+                ),
+                _buildNavItem(
+                  2,
+                  Icons.chat_bubble_outline_rounded,
+                  Icons.chat_bubble_rounded,
+                  'Chat',
+                  currentIndex,
+                ),
+                _buildNavItem(
+                  3,
+                  Icons.people_outline,
+                  Icons.people_rounded,
+                  'Friends',
+                  currentIndex,
+                ),
+                _buildNavItem(
+                  4,
+                  Icons.person_outline,
+                  Icons.person_rounded,
+                  'Profile',
+                  currentIndex,
+                ),
               ],
             ),
           ),
@@ -244,9 +307,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label, int currentIndex) {
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData activeIcon,
+    String label,
+    int currentIndex,
+  ) {
     final isSelected = currentIndex == index;
-    
+
     return GestureDetector(
       onTap: () {
         ref.read(bottomNavIndexProvider.notifier).state = index;
@@ -258,7 +327,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary.withValues(alpha: 0.15) : Colors.transparent,
+          color: isSelected
+              ? AppTheme.primary.withValues(alpha: 0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
