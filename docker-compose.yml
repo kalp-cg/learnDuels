@@ -12,8 +12,7 @@ services:
       # Connect to the 'db' service defined below
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/learnduels_db?schema=public
       # Connect to the 'redis' service defined below
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379
       # JWT Secrets (Using dummy values for local docker - change for production)
       - JWT_SECRET=docker_dev_secret_key_123
       - JWT_REFRESH_SECRET=docker_dev_refresh_secret_key_123
