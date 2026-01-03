@@ -53,12 +53,15 @@ class AuthService {
       // Save user info if available
       final user = data['user'];
       if (user != null) {
-        if (user['id'] != null)
+        if (user['id'] != null) {
           await prefs.setString('userId', user['id'].toString());
-        if (user['email'] != null)
+        }
+        if (user['email'] != null) {
           await prefs.setString('userEmail', user['email']);
-        if (user['fullName'] != null)
+        }
+        if (user['fullName'] != null) {
           await prefs.setString('userName', user['fullName']);
+        }
       }
 
       debugPrint('✅ Tokens and user info saved successfully');
@@ -71,6 +74,72 @@ class AuthService {
         if (message != null) return message.toString();
       }
       return 'Login failed: ${e.message}';
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return 'An unexpected error occurred. Please try again.';
+    }
+  }
+
+  Future<String?> loginWithGoogle(String idToken, String accessToken) async {
+    try {
+      debugPrint('📧 Attempting Google login');
+      final response = await _dio.post(
+        ApiConstants.googleMobile,
+        data: {'idToken': idToken, 'accessToken': accessToken},
+      );
+
+      debugPrint('📥 Response status: ${response.statusCode}');
+
+      // Check if response is successful
+      if (response.data == null) {
+        debugPrint('❌ No data in response');
+        return 'No data received from server';
+      }
+
+      // Extract tokens from the response data
+      final data = response.data['data'];
+      if (data == null) {
+        debugPrint('❌ No data field in response');
+        return 'Invalid response format';
+      }
+
+      final newAccessToken = data['accessToken'];
+      final newRefreshToken = data['refreshToken'];
+
+      if (newAccessToken == null || newRefreshToken == null) {
+        return 'Missing tokens in response';
+      }
+
+      // Save tokens
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('accessToken', newAccessToken);
+      await prefs.setString('refreshToken', newRefreshToken);
+
+      // Save user info if available
+      final user = data['user'];
+      if (user != null) {
+        if (user['id'] != null) {
+          await prefs.setString('userId', user['id'].toString());
+        }
+        if (user['email'] != null) {
+          await prefs.setString('userEmail', user['email']);
+        }
+        if (user['fullName'] != null) {
+          await prefs.setString('userName', user['fullName']);
+        }
+      }
+
+      debugPrint('✅ Tokens and user info saved successfully');
+      return null; // No error
+    } on DioException catch (e) {
+      debugPrint('❌ DioException: ${e.message}');
+      if (e.response != null) {
+        debugPrint('📦 Error Data: ${e.response?.data}');
+        final message = e.response?.data['message'];
+        if (message != null) return message.toString();
+      }
+      return 'Google Login failed: ${e.message}';
     } catch (e, stackTrace) {
       debugPrint('❌ Unexpected error: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -121,12 +190,15 @@ class AuthService {
       // Save user info if available
       final user = data['user'];
       if (user != null) {
-        if (user['id'] != null)
+        if (user['id'] != null) {
           await prefs.setString('userId', user['id'].toString());
-        if (user['email'] != null)
+        }
+        if (user['email'] != null) {
           await prefs.setString('userEmail', user['email']);
-        if (user['fullName'] != null)
+        }
+        if (user['fullName'] != null) {
           await prefs.setString('userName', user['fullName']);
+        }
       }
 
       return null;
