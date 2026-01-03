@@ -7,7 +7,7 @@ import '../constants/api_constants.dart';
 class SpectatorService {
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('access_token');
+    return prefs.getString('accessToken');
   }
 
   /// Get list of spectatable duels

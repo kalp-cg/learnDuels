@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async'; // Added for Timer
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/duel_provider.dart';
 import '../../core/services/socket_service.dart';
+import '../../core/services/api_service.dart';
 
 import '../../core/services/saved_service.dart';
 
@@ -180,6 +183,77 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+      }
+    }
+  }
+
+  Future<void> _reportQuestion(int questionId) async {
+    final reasonController = TextEditingController();
+    final shouldReport = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Question'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Why are you reporting this question?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: 'Reason (e.g., Wrong answer, Offensive)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Report'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldReport == true && mounted) {
+      try {
+        final api = ApiService();
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('accessToken');
+
+        await api.client.post(
+          '/reports',
+          data: {
+            'reportedId': questionId,
+            'type': 'question',
+            'reason': reasonController.text,
+          },
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Question reported successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to report: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -430,6 +504,13 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                 tooltip: 'Share to Chat',
                                 onPressed: () => _askDoubt(question),
                                 color: Theme.of(context).colorScheme.primary,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.flag_outlined),
+                                tooltip: 'Report Question',
+                                onPressed: () =>
+                                    _reportQuestion(question['id']),
+                                color: Theme.of(context).colorScheme.error,
                               ),
                               IconButton(
                                 icon: Icon(

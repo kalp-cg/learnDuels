@@ -33,6 +33,7 @@ class SendChallengeNotifier extends StateNotifier<SendChallengeState> {
     required int topicId,
     required String difficulty,
     required int questionCount,
+    bool isAsync = false,
   }) async {
     state = SendChallengeState(isLoading: true);
 
@@ -45,7 +46,7 @@ class SendChallengeNotifier extends StateNotifier<SendChallengeState> {
         '/challenges',
         data: {
           'opponentId': opponentId,
-          'type': 'instant',
+          'type': isAsync ? 'async' : 'instant',
           'settings': {
             'topicId': topicId,
             'difficulty': difficulty,
@@ -90,6 +91,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
   String? _selectedTopicName;
   String _selectedDifficulty = 'medium';
   int _questionCount = 5;
+  bool _isAsync = false;
 
   @override
   void initState() {
@@ -273,6 +275,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
           topicId: _selectedTopicId!,
           difficulty: _selectedDifficulty,
           questionCount: _questionCount,
+          isAsync: _isAsync,
         );
 
     if (result != null && mounted) {
@@ -367,7 +370,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Async Challenge',
+                            _isAsync ? 'Async Challenge' : 'Live Duel',
                             style: GoogleFonts.outfit(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -375,7 +378,9 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                             ),
                           ),
                           Text(
-                            'Challenge a friend - they can respond anytime!',
+                            _isAsync
+                                ? 'Challenge a friend - they can respond anytime!'
+                                : 'Play a live duel in real-time!',
                             style: GoogleFonts.outfit(
                               fontSize: 13,
                               color: AppTheme.textSecondary,
@@ -387,7 +392,59 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
+
+              // Mode Toggle
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceLight,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.border.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isAsync ? Icons.timer_outlined : Icons.flash_on_rounded,
+                      color: _isAsync ? AppTheme.secondary : AppTheme.accent,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Async Mode',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            'Play at your own pace',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _isAsync,
+                      onChanged: (value) => setState(() => _isAsync = value),
+                      activeColor: AppTheme.secondary,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
 
               // Select Opponent
               _buildSectionTitle('Opponent'),
