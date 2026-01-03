@@ -289,113 +289,117 @@ async function deleteQuestion(questionId, authorId) {
 /**
  * Get random questions for a duel
  */
-async function getRandomQuestions(filters = {}, count = 10) {
+async function getRandomQuestions(filters = {}, count = 10, userIds = []) {
   try {
     const { categoryId, difficultyId } = filters;
-    const where = {
+    
+    // 1. Get IDs of questions already answered by these users
+    let excludedQuestionIds = [];
+    if (userIds && userIds.length > 0) {
+      const pastAnswers = await prisma.duelAnswer.findMany({
+        where: { 
+          playerId: { in: userIds.map(id => parseInt(id)) } 
+        },
+        select: { questionId: true },
+        distinct: ['questionId']
+      });
+      excludedQuestionIds = pastAnswers.map(a => a.questionId);
+    }
+
+    const baseWhere = {
       deletedAt: null,
       status: 'published'
     };
 
     if (categoryId) {
-      where.topics = {
-        some: {
-          topicId: parseInt(categoryId)
-        }
-      };
+      baseWhere.topics = { some: { topicId: parseInt(categoryId) } };
     }
 
-    if (difficultyId) {
-      // Map ID to string if necessary, or use default
-      const difficulties = ['easy', 'medium', 'hard'];
-      if (typeof difficultyId === 'number') {
-        where.difficulty = difficulties[difficultyId - 1] || 'medium';
-      } else if (typeof difficultyId === 'string') {
-        where.difficulty = difficultyId;
-      }
-    }
+    // Helper to resolve difficulty
+    const resolveDifficulty = (diffId) => {
+       const difficulties = ['easy', 'medium', 'hard'];
+       if (typeof diffId === 'number') return difficulties[diffId - 1] || 'medium';
+       if (typeof diffId === 'string') return diffId;
+       return undefined;
+    };
+    const targetDifficulty = resolveDifficulty(difficultyId);
 
-    // Get random questions using raw query for better performance on large datasets
-    // But for now, using findMany with random skip/take or shuffle in app
-    // Since Prisma doesn't support ORDER BY RANDOM() easily across DBs
+    let collectedQuestions = [];
+    let needed = count;
 
-    let totalCount = await prisma.question.count({ where });
-    let questions = [];
-
-    // 1. Try to get questions with specific difficulty
-    if (totalCount > 0) {
-      const take = Math.min(count * 2, totalCount);
-      const skip = Math.max(0, Math.floor(Math.random() * (totalCount - take)));
-
-      questions = await prisma.question.findMany({
-        where,
-        take: take,
-        skip: skip,
-        include: {
-          topics: true,
-          author: {
-            select: {
-              id: true,
-              fullName: true,
-              username: true
+    // Helper to fetch random batch
+    const fetchBatch = async (criteria, limit) => {
+        const count = await prisma.question.count({ where: criteria });
+        if (count === 0) return [];
+        const take = Math.min(limit * 2, count);
+        const skip = Math.max(0, Math.floor(Math.random() * (count - take)));
+        return prisma.question.findMany({
+            where: criteria,
+            take: take,
+            skip: skip,
+            include: {
+                topics: true,
+                author: { select: { id: true, fullName: true, username: true } }
             }
-          }
-        }
-      });
+        });
+    };
+
+    // Step 1: Fresh & Target Difficulty
+    if (needed > 0) {
+        const where1 = { ...baseWhere, id: { notIn: excludedQuestionIds } };
+        if (targetDifficulty) where1.difficulty = targetDifficulty;
+        
+        const batch1 = await fetchBatch(where1, needed);
+        const selected1 = batch1.sort(() => 0.5 - Math.random()).slice(0, needed);
+        collectedQuestions = [...collectedQuestions, ...selected1];
+        needed -= selected1.length;
     }
 
-    // 2. If not enough questions, fetch from ANY difficulty to fill the quota
-    if (questions.length < count) {
-      console.log(`Not enough questions found for difficulty ${where.difficulty || 'any'} (Found: ${questions.length}, Needed: ${count}). Fetching more...`);
-      
-      // Exclude already fetched questions
-      const existingIds = questions.map(q => q.id);
-      
-      // Use base criteria (category only) without difficulty filter
-      const fallbackWhere = {
-        deletedAt: null,
-        status: 'published',
-        id: { notIn: existingIds }
-      };
-
-      if (categoryId) {
-        fallbackWhere.topics = {
-          some: {
-            topicId: parseInt(categoryId)
-          }
+    // Step 2: Fresh & Any Difficulty (only if we didn't get enough)
+    if (needed > 0) {
+        const currentIds = collectedQuestions.map(q => q.id);
+        const where2 = { 
+            ...baseWhere, 
+            id: { notIn: [...excludedQuestionIds, ...currentIds] } 
         };
-      }
-
-      const remainingCount = count - questions.length;
-      const fallbackTotal = await prisma.question.count({ where: fallbackWhere });
-      
-      if (fallbackTotal > 0) {
-           // Fetch more than needed to allow for some randomness
-           const take = Math.min(remainingCount * 2, fallbackTotal);
-           const skip = Math.max(0, Math.floor(Math.random() * (fallbackTotal - take)));
-
-           const moreQuestions = await prisma.question.findMany({
-              where: fallbackWhere,
-              take: take,
-              skip: skip,
-              include: {
-                  topics: true,
-                  author: {
-                      select: {
-                          id: true,
-                          fullName: true,
-                          username: true
-                      }
-                  }
-              }
-          });
-          questions = [...questions, ...moreQuestions];
-      }
+        
+        const batch2 = await fetchBatch(where2, needed);
+        const selected2 = batch2.sort(() => 0.5 - Math.random()).slice(0, needed);
+        collectedQuestions = [...collectedQuestions, ...selected2];
+        needed -= selected2.length;
     }
 
-    // Shuffle in memory
-    const shuffled = questions.sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
+    // Step 3: Seen & Target Difficulty (Recycle seen questions if we ran out of fresh ones)
+    if (needed > 0) {
+        console.log(`Not enough fresh questions. Recycling seen questions for users ${userIds}`);
+        const currentIds = collectedQuestions.map(q => q.id);
+        const where3 = {
+            ...baseWhere,
+            id: { notIn: currentIds } // Only exclude what we just picked in this session
+        };
+        if (targetDifficulty) where3.difficulty = targetDifficulty;
+
+        const batch3 = await fetchBatch(where3, needed);
+        const selected3 = batch3.sort(() => 0.5 - Math.random()).slice(0, needed);
+        collectedQuestions = [...collectedQuestions, ...selected3];
+        needed -= selected3.length;
+    }
+
+    // Step 4: Seen & Any Difficulty (Last resort)
+    if (needed > 0) {
+        const currentIds = collectedQuestions.map(q => q.id);
+        const where4 = {
+            ...baseWhere,
+            id: { notIn: currentIds }
+        };
+        
+        const batch4 = await fetchBatch(where4, needed);
+        const selected4 = batch4.sort(() => 0.5 - Math.random()).slice(0, needed);
+        collectedQuestions = [...collectedQuestions, ...selected4];
+        needed -= selected4.length;
+    }
+
+    return collectedQuestions;
   } catch (error) {
     console.error('Get random questions error:', error);
     throw createError.internal(`Failed to fetch random questions: ${error.message}`);

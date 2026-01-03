@@ -253,7 +253,7 @@ class ChallengeService {
         questions = await questionService.getRandomQuestions({
           categoryId,
           difficultyId: difficulty
-        }, questionCount || 5);
+        }, questionCount || 5, [challenge.challengerId, participant.userId]);
       }
 
       if (questions.length > 0) {

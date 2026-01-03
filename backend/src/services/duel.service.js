@@ -86,7 +86,8 @@ async function createDuel(player1Id, player2Id, settings = {}) {
     // Get random questions
     const questions = await questionService.getRandomQuestions(
       { categoryId, difficultyId },
-      questionCount
+      questionCount,
+      [player1Id, player2Id]
     );
 
     // Check if enough questions are available
