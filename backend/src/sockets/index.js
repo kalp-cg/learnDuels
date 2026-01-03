@@ -5,7 +5,7 @@
 
 const { Server } = require('socket.io');
 const { createAdapter } = require('@socket.io/redis-adapter');
-const Redis = require('ioredis');
+const { createClient } = require('redis');
 const { verifyAccessToken } = require('../utils/token');
 const config = require('../config/env');
 const { prisma } = require('../config/db');
@@ -36,22 +36,27 @@ function initializeSocket(server) {
   });
 
   // Redis Adapter for Clustering
-  if (process.env.REDIS_HOST || config.REDIS_URL) {
-    try {
-      const redisConfig = {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD || undefined,
-      };
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
-      const pubClient = new Redis(redisConfig);
-      const subClient = pubClient.duplicate();
+  try {
+    const pubClient = createClient({ url: redisUrl });
+    const subClient = pubClient.duplicate();
 
-      io.adapter(createAdapter(pubClient, subClient));
-      console.log('✅ Socket.IO Redis Adapter initialized');
-    } catch (error) {
-      console.error('❌ Failed to initialize Redis Adapter:', error);
-    }
+    Promise.all([pubClient.connect(), subClient.connect()])
+      .then(() => {
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log('✅ Socket.IO Redis Adapter initialized');
+      })
+      .catch((err) => {
+        console.error('❌ Failed to connect to Redis for Socket.IO Adapter:', err);
+      });
+
+    // Handle errors
+    pubClient.on('error', (err) => console.error('Redis Pub Client Error:', err));
+    subClient.on('error', (err) => console.error('Redis Sub Client Error:', err));
+
+  } catch (error) {
+    console.error('❌ Failed to initialize Redis Adapter:', error);
   }
 
   // Authentication middleware
@@ -121,9 +126,6 @@ function initializeSocket(server) {
 
     // Register challenge event handlers (PRD compliant)
     challengeHandler.registerEvents(socket, io);
-
-    // Register duel event handlers
-    duelHandler.registerEvents(socket, io);
 
     // Register chat event handlers
     chatHandler.registerEvents(socket, io);
@@ -198,6 +200,47 @@ function initializeSocket(server) {
   // Error handling
   io.on('error', (error) => {
     console.error('Socket.IO server error:', error);
+  });
+
+  // ==========================================
+  // DUEL NAMESPACE (Real-time Gameplay)
+  // ==========================================
+  const duelNamespace = io.of('/duel');
+
+  // Duel Namespace Middleware
+  duelNamespace.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+      if (!token) return next(new Error('Authentication token required'));
+
+      const decoded = verifyAccessToken(token);
+      socket.userId = decoded.userId || decoded.id;
+      
+      // Fetch user details for game state
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: socket.userId },
+          select: { fullName: true, username: true, email: true, avatarUrl: true, rating: true }
+        });
+        if (user) {
+          socket.userEmail = user.email;
+          socket.userName = user.fullName || user.username;
+          socket.userAvatar = user.avatarUrl;
+          socket.userRating = user.rating;
+        }
+      } catch (e) { console.error('User fetch error:', e); }
+
+      next();
+    } catch (error) {
+      next(new Error('Authentication failed'));
+    }
+  });
+
+  duelNamespace.on('connection', (socket) => {
+    console.log(`⚔️  User ${socket.userId} connected to /duel namespace`);
+    
+    // Register duel events on the namespace
+    duelHandler.registerEvents(socket, duelNamespace);
   });
 
   console.log('✅ Socket.IO server initialized');

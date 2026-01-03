@@ -1,5 +1,7 @@
 const io = require('socket.io-client');
 const axios = require('axios');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 const API_URL = 'http://localhost:4000/api';
 const SOCKET_URL = 'http://localhost:4000';
@@ -12,6 +14,56 @@ let aryaToken, devToken;
 let aryaId, devId;
 let aryaSocket, devSocket;
 let challengeId;
+let testTopicId;
+
+async function setupData() {
+  console.log('🛠️ Setting up test data...');
+  
+  const author = await prisma.user.findFirst();
+  if (!author) {
+    console.error('❌ No users found in DB. Run ensure-test-users.js first.');
+    process.exit(1);
+  }
+
+  // Create Topic
+  const topic = await prisma.topic.upsert({
+    where: { slug: 'test-topic' },
+    update: {},
+    create: { name: 'Test Topic', slug: 'test-topic', description: 'For testing' }
+  });
+  testTopicId = topic.id;
+  console.log(`   Topic created: ${topic.name} (${topic.id})`);
+
+  // Create Questions
+  // Check if we already have enough questions
+  const count = await prisma.question.count({
+    where: { topics: { some: { topicId: topic.id } } }
+  });
+
+  if (count < 5) {
+    const questions = [];
+    for (let i = 1; i <= 5; i++) {
+      const q = await prisma.question.create({
+        data: {
+          content: `Test Question ${i} - ${Date.now()}?`,
+          options: ['A', 'B', 'C', 'D'],
+          correctAnswer: 'A',
+          difficulty: 'easy',
+          type: 'mcq',
+          status: 'published',
+          authorId: author.id,
+          topics: {
+            create: { topicId: topic.id }
+          }
+        }
+      });
+      questions.push(q);
+    }
+    console.log(`   Created ${questions.length} test questions`);
+  } else {
+    console.log(`   Topic has ${count} questions, skipping creation.`);
+  }
+}
 
 async function login(credentials) {
   try {
@@ -45,6 +97,8 @@ function connectSocket(token, name) {
 
 async function runTest() {
   console.log('🚀 Starting End-to-End Duel Flow Test...');
+
+  await setupData();
 
   // 1. Login
   console.log('\n🔑 Logging in...');
@@ -93,8 +147,8 @@ async function runTest() {
       `${API_URL}/duels`,
       {
         opponentId: devId,
-        categoryId: 1, // Assuming category 1 exists
-        difficultyId: 1,
+        categoryId: testTopicId,
+        difficultyId: 'easy', // Using string as per seed data, or check API expectation
         questionCount: 5
       },
       { headers: { Authorization: `Bearer ${aryaToken}` } }

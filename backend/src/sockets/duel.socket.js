@@ -7,6 +7,7 @@
 const spectatorService = require('../services/spectator.service');
 const duelService = require('../services/duel.service');
 const notificationService = require('../services/notification.service');
+const userService = require('../services/user.service');
 const { getRedisClient } = require('../config/redis');
 
 // Fallback in-memory state (used if Redis is not available)
@@ -204,7 +205,7 @@ function registerEvents(socket, io) {
       socket.join(redisRoomId);
 
       // Emit Started with first question
-      socket.emit('duel:started', {
+      socket.emit('startDuel', {
         duelId: parseInt(duelId),
         roomId: redisRoomId,
         questions: room.questions,
@@ -346,7 +347,7 @@ function registerEvents(socket, io) {
       await setRoom(roomId, room); // Save updated room
 
       // Ensure both players have their sockets in the room
-      io.sockets.sockets.forEach((s) => {
+      io.sockets.forEach((s) => {
         if (s.userId === hostId || s.userId === opponentId) {
           s.join(roomId);
         }
@@ -379,7 +380,7 @@ function registerEvents(socket, io) {
   });
 
   // Send duel invitation
-  socket.on('duel:invite', async (data) => {
+  socket.on('invite', async (data) => {
     try {
       const { challengeId, opponentId, settings } = data;
 
@@ -405,16 +406,16 @@ function registerEvents(socket, io) {
       }
 
       // Send to user's room (works across cluster with Redis Adapter)
-      io.to(`user:${opponentId}`).emit('duel:invitation_received', invitationData);
+      io.to(`user:${opponentId}`).emit('inviteReceived', invitationData);
 
-      socket.emit('duel:invitation_sent', {
+      socket.emit('inviteSent', {
         challengeId,
         opponentId,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error('Duel invitation error:', error);
-      socket.emit('duel:invitation_failed', {
+      socket.emit('inviteFailed', {
         error: 'Internal server error',
         challengeId: data.challengeId,
       });
@@ -422,7 +423,7 @@ function registerEvents(socket, io) {
   });
 
   // Accept duel invitation
-  socket.on('duel:accept', async (data) => {
+  socket.on('inviteAccepted', async (data) => {
     try {
       const { challengeId, challengerId } = data;
 
@@ -442,7 +443,7 @@ function registerEvents(socket, io) {
       }
 
       // 2. Accept Challenge via Service (creates Duel if needed)
-      console.log(`DEBUG: Accepting challenge ${challengeId} for user ${socket.userId}`);
+      console.log(`DEBUG: inviteAccepted challengeId: ${challengeId}, challengerId: ${challengerId}, roomId: ${roomId}`);
       const acceptanceResult = await challengeService.acceptChallenge(challengeId, socket.userId);
       
       if (!acceptanceResult || !acceptanceResult.duelId) {
@@ -522,11 +523,11 @@ function registerEvents(socket, io) {
         timestamp: new Date().toISOString(),
       };
 
-      console.log(`DEBUG: Emitting duel:started to room ${roomId} and user ${challengerId}`);
-      io.to(roomId).emit('duel:started', startPayload);
+      console.log(`DEBUG: Emitting startDuel to room ${roomId} and user ${challengerId}`);
+      io.to(roomId).emit('startDuel', startPayload);
 
       // Redundant emit to ensure challenger gets it (if not in room yet)
-      io.to(`user:${challengerId}`).emit('duel:started', startPayload);
+      io.to(`user:${challengerId}`).emit('startDuel', startPayload);
 
       // 7. Start Game - Send first question to each player
       setTimeout(() => {
@@ -561,8 +562,10 @@ function registerEvents(socket, io) {
 
   // Submit answer - ASYNC FLOW: Player advances immediately, no waiting for opponent
   socket.on('duel:submit_answer', async (data) => {
+    socket.emit('duel:debug', { message: 'Received submit_answer' });
     try {
-      const { questionId, answer, timeUsed } = data;
+      const { questionId, answer } = data;
+      const timeUsed = Number(data.timeUsed) || 0;
       const roomId = await getUserRoom(socket.userId);
 
       console.log(`[SUBMIT_ANSWER] User ${socket.userId} roomId: ${roomId}`);
@@ -633,6 +636,8 @@ function registerEvents(socket, io) {
       playerProgress[socket.userId] = nextQuestionIndex;
       room.playerProgress = playerProgress;
       
+      socket.emit('duel:debug', { message: `Progress updated: ${nextQuestionIndex}/${room.questions.length}` });
+
       // CRITICAL: Exclude answers/scores from setRoom to avoid overwriting Redis with stale data
       // We already updated them atomically via saveUserAnswer/incrementUserScore
       const { answers: _a, scores: _s, ...roomUpdate } = room;
@@ -670,6 +675,15 @@ function registerEvents(socket, io) {
         message: `Opponent answered question ${currentQuestionIndex + 1}`,
       });
 
+      // Notify Spectators
+      io.to(roomId).emit('spectator:update', {
+        playerId: socket.userId,
+        progress: nextQuestionIndex,
+        score: updatedRoom.scores[socket.userId] || 0,
+        scores: updatedRoom.scores,
+        playerProgress: updatedRoom.playerProgress
+      });
+
       // 7. Send next question to THIS player or finish
       if (nextQuestionIndex < room.questions.length) {
         const nextQuestion = room.questions[nextQuestionIndex];
@@ -681,10 +695,31 @@ function registerEvents(socket, io) {
         });
       } else {
         // This player finished!
+        // Calculate stats
+        let correct = 0;
+        let wrong = 0;
+        let skipped = 0;
+        let timeTaken = 0;
+        
+        if (room.answers && room.answers[socket.userId]) {
+             Object.values(room.answers[socket.userId]).forEach(a => {
+                 timeTaken += (Number(a.timeUsed) || 0);
+                 if (a.isSkipped) skipped++;
+                 else if (a.isCorrect) correct++;
+                 else wrong++;
+             });
+        }
+
         socket.emit('duel:player_finished', {
           message: 'You finished! Waiting for opponent...',
           yourScore: updatedRoom.scores[socket.userId] || 0,
           totalQuestions: room.questions.length,
+          stats: {
+              correctAnswers: correct,
+              wrongAnswers: wrong,
+              skippedAnswers: skipped,
+              timeTaken: timeTaken
+          }
         });
       }
 
@@ -693,7 +728,13 @@ function registerEvents(socket, io) {
         (updatedRoom.playerProgress?.[id] || 0) >= room.questions.length
       );
 
+      const debugMsg = `[DEBUG] Check Finished: ${allFinished}. Progress: ${JSON.stringify(updatedRoom.playerProgress)}`;
+      console.log(debugMsg);
+      io.to(roomId).emit('duel:debug', { message: debugMsg });
+
       if (allFinished) {
+        console.log(`[DEBUG] All finished. Ending duel ${roomId}`);
+        io.to(roomId).emit('duel:debug', { message: `Ending duel ${roomId}` });
         endDuel(io, roomId);
       }
 
@@ -761,6 +802,57 @@ function registerEvents(socket, io) {
     } catch (error) {
       console.error('Early leave error:', error);
       socket.emit('duel:error', { message: 'Failed to leave duel' });
+    }
+  });
+
+  // Spectator Join
+  socket.on('spectator:join', async (data) => {
+    try {
+      const { duelId } = data;
+      // Find room by duelId (we might need a mapping or search)
+      // For now, assume we can find it or client sends roomId. 
+      // If client sends duelId, we need to find the room.
+      // Since we don't have a direct duelId -> roomId map in Redis easily accessible without scanning,
+      // we'll assume the client sends the roomId (which they can get from the API).
+      // But wait, the API returns duelId.
+      // Let's try to find the room.
+      
+      let roomId = data.roomId;
+      if (!roomId && duelId) {
+         // Try to find room by duelId (this is expensive if we scan, but maybe we can use the DB)
+         const duel = await duelService.getDuelById(duelId);
+         if (duel && duel.roomCode) {
+            roomId = duel.roomCode;
+         }
+      }
+
+      if (!roomId) {
+        socket.emit('spectator:error', { message: 'Room not found' });
+        return;
+      }
+
+      const room = await getRoom(roomId);
+      if (!room) {
+        socket.emit('spectator:error', { message: 'Duel not active' });
+        return;
+      }
+
+      socket.join(roomId);
+      
+      // Send initial state
+      socket.emit('spectator:joined', {
+        roomId,
+        duelId: room.duelId,
+        players: room.players,
+        scores: room.scores,
+        playerProgress: room.playerProgress,
+        questions: room.questions,
+        status: room.status
+      });
+
+    } catch (error) {
+      console.error('Spectator join error:', error);
+      socket.emit('spectator:error', { message: 'Failed to join as spectator' });
     }
   });
 
@@ -990,49 +1082,67 @@ async function endDuel(io, roomId) {
 
   const p1 = String(playerIds[0]);
   const p2 = String(playerIds[1]);
-  const s1 = room.scores[p1] || 0;
-  const s2 = room.scores[p2] || 0;
+  const s1 = Number(room.scores[p1]) || 0;
+  const s2 = Number(room.scores[p2]) || 0;
 
-  // Determine winner
-  let winnerId = null;
-  if (s1 > s2) winnerId = p1;
-  else if (s2 > s1) winnerId = p2;
-
-  // Get player names from database
-  const { prisma } = require('../config/db');
-  let player1Info = { id: p1, name: 'Player 1', avatarUrl: null };
-  let player2Info = { id: p2, name: 'Player 2', avatarUrl: null };
-
+  // Fetch player info
+  let player1Info = {};
+  let player2Info = {};
+  
   try {
-    const [user1, user2] = await Promise.all([
-      prisma.user.findUnique({ where: { id: parseInt(p1) }, select: { id: true, fullName: true, avatarUrl: true } }),
-      prisma.user.findUnique({ where: { id: parseInt(p2) }, select: { id: true, fullName: true, avatarUrl: true } })
+    const [u1, u2] = await Promise.all([
+      userService.getUserProfile(p1),
+      userService.getUserProfile(p2)
     ]);
-    if (user1) player1Info = { id: user1.id, name: user1.fullName || 'Player 1', avatarUrl: user1.avatarUrl };
-    if (user2) player2Info = { id: user2.id, name: user2.fullName || 'Player 2', avatarUrl: user2.avatarUrl };
+    player1Info = { name: u1.username, avatar: u1.avatarUrl, rating: u1.rating };
+    player2Info = { name: u2.username, avatar: u2.avatarUrl, rating: u2.rating };
   } catch (e) {
-    console.error('Failed to fetch player names:', e);
+    console.error('Failed to fetch player info for duel end:', e);
+    // Fallback if fetch fails
+    player1Info = { name: 'Player 1', avatar: null };
+    player2Info = { name: 'Player 2', avatar: null };
   }
 
-  // Calculate total time taken per player
+  // Calculate total time taken per player FIRST (needed for tie-breaker)
   let player1TotalTime = 0;
   let player2TotalTime = 0;
   let player1Correct = 0;
   let player1Wrong = 0;
+  let player1Skipped = 0;
   let player2Correct = 0;
   let player2Wrong = 0;
+  let player2Skipped = 0;
   
   if (room.answers) {
     Object.values(room.answers[p1] || {}).forEach(a => { 
-      player1TotalTime += (a.timeUsed || 0);
-      if (a.isCorrect) player1Correct++;
+      player1TotalTime += (Number(a.timeUsed) || 0);
+      if (a.isSkipped) player1Skipped++;
+      else if (a.isCorrect) player1Correct++;
       else player1Wrong++;
     });
     Object.values(room.answers[p2] || {}).forEach(a => { 
-      player2TotalTime += (a.timeUsed || 0);
-      if (a.isCorrect) player2Correct++;
+      player2TotalTime += (Number(a.timeUsed) || 0);
+      if (a.isSkipped) player2Skipped++;
+      else if (a.isCorrect) player2Correct++;
       else player2Wrong++;
     });
+  }
+
+  // Determine winner with Tie-Breaker (Score > Time)
+  let winnerId = null;
+  if (s1 > s2) {
+    winnerId = p1;
+  } else if (s2 > s1) {
+    winnerId = p2;
+  } else {
+    // Scores are equal, check time (lower is better)
+    if (player1TotalTime < player2TotalTime) {
+      winnerId = p1;
+    } else if (player2TotalTime < player1TotalTime) {
+      winnerId = p2;
+    } else {
+      winnerId = null; // True Tie
+    }
   }
 
   const finalResults = {
@@ -1047,14 +1157,16 @@ async function endDuel(io, roomId) {
         score: s1, 
         timeTaken: player1TotalTime,
         correctAnswers: player1Correct,
-        wrongAnswers: player1Wrong
+        wrongAnswers: player1Wrong,
+        skippedAnswers: player1Skipped
       },
       [p2]: { 
         ...player2Info, 
         score: s2, 
         timeTaken: player2TotalTime,
         correctAnswers: player2Correct,
-        wrongAnswers: player2Wrong
+        wrongAnswers: player2Wrong,
+        skippedAnswers: player2Skipped
       }
     },
     totalQuestions: room.questions?.length || 0,
@@ -1072,14 +1184,14 @@ async function endDuel(io, roomId) {
     for (const playerId of Object.keys(room.leftEarly)) {
       if (room.leftEarly[playerId]) {
         try {
-          const playerIdInt = parseInt(playerId);
-          const opponentId = playerIdInt === p1 ? p2 : p1;
-          const opponentName = playerIdInt === p1 ? player2Info.name : player1Info.name;
+          const playerIdStr = String(playerId);
+          const opponentId = playerIdStr === p1 ? p2 : p1;
+          const opponentName = playerIdStr === p1 ? player2Info.name : player1Info.name;
           const playerScore = room.scores[playerId] || 0;
           const opponentScore = room.scores[opponentId] || 0;
 
           let resultMessage;
-          if (winnerId === playerIdInt) {
+          if (winnerId === playerIdStr) {
             resultMessage = `🏆 Duel Complete! You WON against ${opponentName}! Score: ${playerScore} - ${opponentScore}`;
           } else if (winnerId === opponentId) {
             resultMessage = `😔 Duel Complete! You lost to ${opponentName}. Score: ${playerScore} - ${opponentScore}`;
