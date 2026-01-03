@@ -1107,6 +1107,68 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 ```json
 {
   "success": true,
+  "message": "All notifications marked as read"
+}
+```
+
+### 8.4 Register Device for Push Notifications
+**POST** `http://localhost:4000/api/notifications/register-device`
+
+**Headers:**
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+**Body:**
+```json
+{
+  "token": "fcm_device_token_here",
+  "platform": "android"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Device registered for push notifications",
+  "data": {}
+}
+```
+
+### 8.5 Remove Device Token
+**DELETE** `http://localhost:4000/api/notifications/remove-device`
+
+**Headers:**
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+**Body:**
+```json
+{
+  "token": "fcm_device_token_here"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Device token removed",
+  "data": {}
+}
+```
+
+**Headers:**
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
   "message": "All notifications marked as read",
   "data": {
     "count": 5

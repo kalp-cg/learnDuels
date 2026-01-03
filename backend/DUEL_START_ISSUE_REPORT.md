@@ -1,6 +1,20 @@
 # 🔍 Duel Start Algorithm - Status Report
 
-## ⚠️ CRITICAL ISSUES FOUND
+## ✅ RESOLVED
+
+### Issue #1: **Async Flow vs Sync Flow Mismatch** ✅
+**Status:** Fixed
+**Resolution:** The synchronous `sendQuestion()` logic has been removed. `startDuel()` now correctly uses the asynchronous flow, emitting `duel:next_question` to individual players.
+
+### Issue #2: **startDuel() Sends Wrong Event** ✅
+**Status:** Fixed
+**Resolution:** `startDuel()` now emits `duel:next_question` which is compatible with the client-side handler.
+
+---
+
+## ⚠️ CRITICAL ISSUES FOUND (ARCHIVED)
+
+*The following issues were identified and have been resolved.*
 
 ### Issue #1: **Async Flow vs Sync Flow Mismatch** 🔴
 **Location:** `backend/src/sockets/duel.socket.js`

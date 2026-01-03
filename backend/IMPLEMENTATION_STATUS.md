@@ -385,9 +385,9 @@ http://localhost:4000/api/auth/google
 
 ### Remaining Work (Priority Order):
 1. ✅ Configure Google OAuth credentials (5 min)
-2. 🟡 Set up push notifications (1-2 hours)
-3. 🟡 Add monitoring dashboard (2-4 hours)
-4. 🟡 CI/CD pipeline (4-8 hours)
+2. ✅ Set up push notifications (Implemented via FCM)
+3. ✅ Add monitoring dashboard (Prometheus metrics exposed)
+4. ✅ CI/CD pipeline (GitHub Actions configured)
 5. 🔴 Payment integration (post-MVP)
 6. 🔴 Code runner (post-MVP)
 
