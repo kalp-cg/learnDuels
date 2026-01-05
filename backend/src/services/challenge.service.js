@@ -54,7 +54,8 @@ class ChallengeService {
 
     // Default settings
     const defaultSettings = {
-      numQuestions: settings.numQuestions || 10,
+      numQuestions: settings.numQuestions || settings.questionCount || 10,
+      questionCount: settings.questionCount || settings.numQuestions || 10, // Ensure compatibility
       timeLimit: settings.timeLimit || 30, // seconds per question
       topicIds: settings.topicIds || [],
       difficulty: settings.difficulty || 'medium',

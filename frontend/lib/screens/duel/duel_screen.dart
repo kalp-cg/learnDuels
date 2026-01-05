@@ -454,13 +454,18 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                 }
 
                 final question = questions[currentQuestionIndex];
+                // Safe parsing of ID
+                final questionId = question['id'] is int
+                    ? question['id']
+                    : int.tryParse(question['id'].toString()) ?? 0;
+
                 final questionResult = duelData['questionResult'];
                 final isOpponentAnswered =
                     duelData['isOpponentAnswered'] ?? false;
 
                 // SAFETY CHECK: If we're showing a different question than we think we answered,
                 // reset the answered state. This prevents buffering if the listener doesn't fire.
-                if (_answered && _lastShownQuestionId != question['id']) {
+                if (_answered && _lastShownQuestionId != questionId) {
                   debugPrint(
                     '⚠️ Safety reset: Question changed but _answered is still true',
                   );
@@ -473,7 +478,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                     }
                   });
                 }
-                _lastShownQuestionId = question['id'];
+                _lastShownQuestionId = questionId;
 
                 // Note: We need to reset _isSaved when question changes,
                 // but we don't have easy previousIndex here.
@@ -508,8 +513,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                               IconButton(
                                 icon: const Icon(Icons.flag_outlined),
                                 tooltip: 'Report Question',
-                                onPressed: () =>
-                                    _reportQuestion(question['id']),
+                                onPressed: () => _reportQuestion(questionId),
                                 color: Theme.of(context).colorScheme.error,
                               ),
                               IconButton(
@@ -519,7 +523,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                       : Icons.bookmark_border_rounded,
                                 ),
                                 tooltip: 'Save to Vault',
-                                onPressed: () => _toggleSave(question['id']),
+                                onPressed: () => _toggleSave(questionId),
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                             ],
@@ -627,8 +631,17 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                   final optionLetter = String.fromCharCode(
                                     65 + index,
                                   ); // A=65
-                                  final text =
-                                      optionData['text']?.toString() ?? '';
+
+                                  // Handle both String and Map options
+                                  String text;
+                                  if (optionData is String) {
+                                    text = optionData;
+                                  } else if (optionData is Map) {
+                                    text = optionData['text']?.toString() ?? '';
+                                  } else {
+                                    text = optionData?.toString() ?? '';
+                                  }
+
                                   return _buildOption(
                                     optionLetter,
                                     text,
@@ -669,7 +682,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                   TextButton.icon(
                                     onPressed: () => _skipQuestion(
                                       duelData['duelId'],
-                                      question['id'],
+                                      questionId,
                                     ),
                                     icon: const Icon(Icons.skip_next),
                                     label: const Text('Skip'),
@@ -700,7 +713,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
                                             int.parse(
                                               duelData['duelId'].toString(),
                                             ),
-                                            question['id'],
+                                            questionId,
                                             _selectedOption!,
                                             timeUsed: timeUsed,
                                           );
