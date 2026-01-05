@@ -6,8 +6,11 @@
 const http = require('http');
 const { initializeApp } = require('./app');
 const { initializeSocket } = require('./sockets');
-const config = require('./config/env');
 const { prisma } = require('./config/db');
+
+// Get PORT directly from environment (AWS Elastic Beanstalk compatible)
+const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 
 /**
  * Create and start the HTTP server
@@ -32,9 +35,9 @@ async function startServer() {
         throw error;
       }
 
-      const bind = typeof config.PORT === 'string'
-        ? 'Pipe ' + config.PORT
-        : 'Port ' + config.PORT;
+      const bind = typeof PORT === 'string'
+        ? 'Pipe ' + PORT
+        : 'Port ' + PORT;
 
       // Handle specific listen errors with friendly messages
       switch (error.code) {
@@ -58,10 +61,10 @@ async function startServer() {
         : 'port ' + addr.port;
       
       console.log('🎯 Server Configuration:');
-      console.log(`   Environment: ${config.NODE_ENV}`);
+      console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`   Port: ${addr.port}`);
-      console.log(`   Database: ${config.DATABASE_URL ? 'Connected' : 'Not configured'}`);
-      console.log(`   Redis: ${config.REDIS_URL ? 'Configured' : 'Not configured'}`);
+      console.log(`   Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+      console.log(`   Redis: ${process.env.REDIS_URL ? 'Configured' : 'Not configured'}`);
       console.log('');
       console.log('🌐 API Endpoints:');
       console.log(`   Health: http://localhost:${addr.port}/health`);
@@ -123,7 +126,7 @@ async function startServer() {
     });
 
     // Start listening
-    server.listen(config.PORT, config.HOST);
+    server.listen(PORT, HOST);
 
     return server;
   } catch (error) {

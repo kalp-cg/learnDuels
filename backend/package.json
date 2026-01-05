@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest --detectOpenHandles --forceExit -i",
     "dev": "nodemon --watch src --exec node src/server.js",
-    "start": "nodemon --watch src --exec node src/server.js",
+    "start": "node src/server.js",
     "build": "npx prisma generate",
     "postinstall": "npx prisma generate",
     "db:generate": "prisma generate",

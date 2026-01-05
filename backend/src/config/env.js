@@ -1,77 +1,97 @@
 /**
  * Environment Configuration
- * Loads and validates environment variables
+ * EB-safe, fail-fast, production-ready
  */
 
 const dotenv = require('dotenv');
-const path = require('path');
 
-// Load environment variables
-const result = dotenv.config({ path: path.join(__dirname, '../../.env') });
-console.log('DEBUG: dotenv load result:', result.error ? 'FAILED: ' + result.error.message : 'SUCCESS');
-
-// Environment configuration with defaults
-const config = {
-  // Server configuration
-  NODE_ENV: (process.env.NODE_ENV || 'development').trim(),
-  PORT: parseInt(process.env.PORT) || 5000,
-  HOST: '0.0.0.0',
-
-  // Database configuration
-  DATABASE_URL: (process.env.DATABASE_URL || '').trim(),
-
-  // JWT configuration
-  JWT_SECRET: (process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production').trim(),
-  JWT_REFRESH_SECRET: (process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key-change-in-production').trim(),
-  JWT_EXPIRE: (process.env.JWT_EXPIRE || '15m').trim(),
-  JWT_REFRESH_EXPIRE: (process.env.JWT_REFRESH_EXPIRE || '7d').trim(),
-
-  // Redis configuration (optional)
-  REDIS_URL: process.env.REDIS_URL,
-  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
-
-  // CORS configuration
-  CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
-
-  // Rate limiting
-  RATE_LIMIT_WINDOW: parseInt(process.env.RATE_LIMIT_WINDOW) || 15 * 60 * 1000, // 15 minutes
-  RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX) || 100, // 100 requests per window
-
-  // Security
-  BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS) || 12,
-
-  // Google OAuth configuration
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-  SERVER_URL: 'http://10.159.51.37:4000', // Updated to current local IP
-  FLUTTER_DEEP_LINK_SCHEME: process.env.FLUTTER_DEEP_LINK_SCHEME || 'learn_duel_app',
-
-  // Socket.IO configuration
-  SOCKET_CORS_ORIGIN: process.env.SOCKET_CORS_ORIGIN || '*',
-
-  // Cloudinary configuration (for image uploads)
-  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
-  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
-};
-
-// Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL'];
-
-for (const envVar of requiredEnvVars) {
-  if (!config[envVar]) {
-    throw new Error(`Missing required environment variable: ${envVar}`);
-  }
+// Load .env ONLY for local development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
 }
 
-// Log configuration in development
-if (config.NODE_ENV === 'development') {
-  console.log('Environment Configuration:');
-  console.log(`- Node Environment: ${config.NODE_ENV}`);
-  console.log(`- Port: ${config.PORT}`);
-  console.log(`- Database URL: ${config.DATABASE_URL ? 'Set' : 'Not set'}`);
-  console.log(`- JWT Secret: ${config.JWT_SECRET ? 'Set' : 'Not set'}`);
-  console.log(`- CORS Origin: ${config.CORS_ORIGIN}`);
+// Helper to require env vars (fail fast)
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`❌ Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+// Helper for optional numeric env
+function optionalNumber(name, defaultValue) {
+  const value = process.env[name];
+  return value ? Number(value) : defaultValue;
+}
+
+const config = {
+  /* ============================
+     Server
+  ============================ */
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: Number(process.env.PORT) || 8080, // EB injects PORT
+  HOST: '0.0.0.0',
+
+  /* ============================
+     Database (REQUIRED)
+  ============================ */
+  DATABASE_URL: requireEnv('DATABASE_URL'),
+
+  /* ============================
+     JWT (REQUIRED)
+  ============================ */
+  JWT_SECRET: requireEnv('JWT_SECRET'),
+  JWT_REFRESH_SECRET: requireEnv('JWT_REFRESH_SECRET'),
+  JWT_EXPIRE: process.env.JWT_EXPIRE || '15m',
+  JWT_REFRESH_EXPIRE: process.env.JWT_REFRESH_EXPIRE || '7d',
+
+  /* ============================
+     Redis (Optional but explicit)
+  ============================ */
+  REDIS_HOST: process.env.REDIS_HOST || null,
+  REDIS_PORT: process.env.REDIS_PORT ? Number(process.env.REDIS_PORT) : null,
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || null,
+  REDIS_DB: process.env.REDIS_DB ? Number(process.env.REDIS_DB) : 0,
+
+  /* ============================
+     CORS
+  ============================ */
+  CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+
+  /* ============================
+     Rate Limiting
+  ============================ */
+  RATE_LIMIT_WINDOW: optionalNumber('RATE_LIMIT_WINDOW', 15 * 60 * 1000),
+  RATE_LIMIT_MAX: optionalNumber('RATE_LIMIT_MAX', 100),
+
+  /* ============================
+     Security
+  ============================ */
+  BCRYPT_ROUNDS: optionalNumber('BCRYPT_ROUNDS', 12),
+
+  /* ============================
+     URLs
+  ============================ */
+  SERVER_URL: requireEnv('SERVER_URL'),
+  FLUTTER_WEB_URL: process.env.FLUTTER_WEB_URL || null,
+  FLUTTER_DEEP_LINK_SCHEME: process.env.FLUTTER_DEEP_LINK_SCHEME || 'learn_duel_app',
+
+  /* ============================
+     Cloudinary (Optional features)
+  ============================ */
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || null,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || null,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || null,
+};
+
+// Minimal safe log (no secrets)
+if (config.NODE_ENV !== 'production') {
+  console.log('✅ Environment loaded:');
+  console.log(`- NODE_ENV: ${config.NODE_ENV}`);
+  console.log(`- PORT: ${config.PORT}`);
+  console.log(`- DATABASE_URL: ${config.DATABASE_URL ? 'SET' : 'MISSING'}`);
+  console.log(`- REDIS: ${config.REDIS_HOST ? 'ENABLED' : 'DISABLED'}`);
 }
 
 module.exports = config;

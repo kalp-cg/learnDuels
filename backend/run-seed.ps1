@@ -1,1 +1,0 @@
-node seed-questions.js
