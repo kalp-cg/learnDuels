@@ -60,11 +60,16 @@ router.post('/', authenticate, async (req, res, next) => {
 // Start a practice attempt
 router.post('/practice', authenticate, async (req, res, next) => {
   try {
-    const { topicId, difficulty } = req.body;
+    const { topicId, difficulty, limit } = req.body;
     if (!topicId) {
       return res.status(400).json({ success: false, message: 'topicId is required' });
     }
-    const result = await attemptService.startPracticeAttempt(req.user.id, topicId, difficulty || 'MEDIUM');
+    const result = await attemptService.startPracticeAttempt(
+      req.user.id, 
+      topicId, 
+      difficulty || 'MEDIUM',
+      limit ? parseInt(limit) : 10
+    );
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     next(error);
