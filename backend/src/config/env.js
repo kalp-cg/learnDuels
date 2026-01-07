@@ -5,10 +5,10 @@
 
 const dotenv = require('dotenv');
 
-// Load .env ONLY for local development
-if (process.env.NODE_ENV !== 'production') {
-  dotenv.config();
-}
+// Load .env file
+// Note: dotenv will NOT overwrite existing environment variables, 
+// so this is safe even if variables are provided by the host system.
+dotenv.config();
 
 // Helper to require env vars (fail fast)
 function requireEnv(name) {
