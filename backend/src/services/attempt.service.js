@@ -59,7 +59,7 @@ class AttemptService {
   async startPracticeAttempt(userId, topicId, difficulty, limit = 10) {
     const fetchLimit = Math.max(limit, 20); // Fetch enough questions for shuffling
 
-    // Fetch questions for the topic and difficulty
+    // 1. Fetch questions matching the difficulty
     const questions = await prisma.question.findMany({
       where: {
         topics: {
@@ -77,28 +77,37 @@ class AttemptService {
       }
     });
 
-    if (questions.length === 0) {
-      // Fallback: try without difficulty filter
-      const anyQuestions = await prisma.question.findMany({
+    // 2. If we don't have enough questions to satisfy the limit (or the fetchLimit buffer), 
+    // fetch more from other difficulties to fill the gap.
+    if (questions.length < fetchLimit) {
+      const existingIds = questions.map(q => q.id);
+      const remainingToFetch = fetchLimit - questions.length;
+
+      const moreQuestions = await prisma.question.findMany({
         where: {
           topics: {
             some: {
               topicId: parseInt(topicId)
             }
           },
+          id: {
+            notIn: existingIds
+          },
           status: 'published',
           deletedAt: null,
         },
-        take: fetchLimit,
+        // Fetch up to the remaining buffer size
+        take: remainingToFetch,
         orderBy: {
           createdAt: 'desc'
         }
       });
       
-      if (anyQuestions.length === 0) {
-         throw new Error('No questions found for this topic. Please add questions first.');
-      }
-      questions.push(...anyQuestions);
+      questions.push(...moreQuestions);
+    }
+      
+    if (questions.length === 0) {
+       throw new Error('No questions found for this topic. Please add questions first.');
     }
 
     // Shuffle and take requested number of questions
