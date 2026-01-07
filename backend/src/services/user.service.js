@@ -395,6 +395,43 @@ async function acceptFollowRequest(userId, followerId) {
       where: { id: followRequest.id },
       data: { status: 'accepted' },
     });
+
+    // Make friendship mutual (bidirectional)
+    try {
+      // Check if reverse relationship exists (User -> Follower)
+      const reverseFollow = await prisma.userFollower.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: parseInt(userId),
+            followingId: parseInt(followerId)
+          }
+        }
+      });
+
+      if (reverseFollow) {
+        // If it exists (even if pending/declined), update to accepted so both are friends
+        if (reverseFollow.status !== 'accepted') {
+          await prisma.userFollower.update({
+            where: { id: reverseFollow.id },
+            data: { status: 'accepted' }
+          });
+          console.log(`✅ Mutual friendship established (updated reverse relation)`);
+        }
+      } else {
+        // Create new accepted relationship so user automatically follows back
+        await prisma.userFollower.create({
+          data: {
+            followerId: parseInt(userId),
+            followingId: parseInt(followerId),
+            status: 'accepted'
+          }
+        });
+        console.log(`✅ Mutual friendship established (created reverse relation)`);
+      }
+    } catch (reverseError) {
+      console.error('Error establishing mutual friendship:', reverseError);
+      // Don't fail the request if reverse update fails, just log it
+    }
     
     console.log(`✅ Follow request accepted: ${updated.id}, status: ${updated.status}`);
 
