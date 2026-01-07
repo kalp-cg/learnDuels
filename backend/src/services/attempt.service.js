@@ -56,7 +56,9 @@ class AttemptService {
   /**
    * Start a practice attempt (no question set)
    */
-  async startPracticeAttempt(userId, topicId, difficulty) {
+  async startPracticeAttempt(userId, topicId, difficulty, limit = 10) {
+    const fetchLimit = Math.max(limit, 20); // Fetch enough questions for shuffling
+
     // Fetch questions for the topic and difficulty
     const questions = await prisma.question.findMany({
       where: {
@@ -69,7 +71,7 @@ class AttemptService {
         status: 'published',
         deletedAt: null,
       },
-      take: 15, // Fetch 15 questions
+      take: fetchLimit,
       orderBy: {
         createdAt: 'desc'
       }
@@ -87,7 +89,7 @@ class AttemptService {
           status: 'published',
           deletedAt: null,
         },
-        take: 15,
+        take: fetchLimit,
         orderBy: {
           createdAt: 'desc'
         }
@@ -99,9 +101,9 @@ class AttemptService {
       questions.push(...anyQuestions);
     }
 
-    // Shuffle and take 10 questions
+    // Shuffle and take requested number of questions
     const shuffled = questions.sort(() => Math.random() - 0.5);
-    const selectedQuestions = shuffled.slice(0, Math.min(10, shuffled.length));
+    const selectedQuestions = shuffled.slice(0, Math.min(limit, shuffled.length));
 
     const attempt = await prisma.attempt.create({
       data: {
