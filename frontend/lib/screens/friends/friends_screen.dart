@@ -231,13 +231,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.background, Color(0xFF0F1228)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: TabBarView(
           controller: _tabController,
           children: [_buildFriendsList(), _buildFindFriendsList()],
@@ -377,9 +371,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-              ),
+              color: AppTheme.primary,
               borderRadius: BorderRadius.circular(14),
             ),
             child: friend['avatarUrl'] != null
@@ -430,9 +422,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
             children: [
               Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primary, AppTheme.primaryDark],
-                  ),
+                  color: AppTheme.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Material(
@@ -809,9 +799,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 )
               : Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.accent, Color(0xFF00C7B1)],
-                    ),
+                    color: AppTheme.accent,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Material(

@@ -295,14 +295,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             margin: const EdgeInsets.only(bottom: 24),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFFFF9800), // Orange
-                  const Color(0xFFFF5722), // Deep Orange
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: const Color(0xFFFF5722), // Deep Orange
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(

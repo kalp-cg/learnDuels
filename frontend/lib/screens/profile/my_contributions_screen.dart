@@ -7,25 +7,27 @@ import '../../core/theme.dart';
 import '../../core/services/api_service.dart';
 
 // Provider for fetching user's contributed questions
-final myContributionsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+final myContributionsProvider = FutureProvider.autoDispose<List<dynamic>>((
+  ref,
+) async {
   final api = ApiService();
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  
+
   if (token == null) return [];
-  
+
   try {
     // First get the current user's ID
     final meResponse = await api.client.get(
       '/auth/me',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    
+
     if (meResponse.data['success'] != true) return [];
-    
+
     final userId = meResponse.data['data']?['id'];
     if (userId == null) return [];
-    
+
     // Now fetch questions by this author
     final response = await api.client.get(
       '/questions',
@@ -36,7 +38,7 @@ final myContributionsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) 
       },
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    
+
     if (response.data['success'] == true) {
       return response.data['data'] ?? [];
     }
@@ -60,7 +62,10 @@ class MyContributionsScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppTheme.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -74,13 +79,7 @@ class MyContributionsScreen extends ConsumerWidget {
         centerTitle: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.background, Color(0xFF0F1228)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: contributionsAsync.when(
           data: (contributions) {
             if (contributions.isEmpty) {
@@ -93,7 +92,11 @@ class MyContributionsScreen extends ConsumerWidget {
                 if (index == 0) {
                   return _buildHeader(context, contributions.length);
                 }
-                return _buildQuestionCard(context, contributions[index - 1], index);
+                return _buildQuestionCard(
+                  context,
+                  contributions[index - 1],
+                  index,
+                );
               },
             );
           },
@@ -104,7 +107,11 @@ class MyContributionsScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline_rounded, size: 48, color: AppTheme.error.withValues(alpha: 0.7)),
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: AppTheme.error.withValues(alpha: 0.7),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Error loading contributions',
@@ -117,9 +124,7 @@ class MyContributionsScreen extends ConsumerWidget {
       ),
       floatingActionButton: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppTheme.primary, AppTheme.primaryDark],
-          ),
+          color: AppTheme.primary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -151,12 +156,7 @@ class MyContributionsScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.accent.withValues(alpha: 0.15),
-            AppTheme.primary.withValues(alpha: 0.1),
-          ],
-        ),
+        color: AppTheme.accent.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
       ),
@@ -168,7 +168,11 @@ class MyContributionsScreen extends ConsumerWidget {
               color: AppTheme.accent.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.quiz_rounded, color: AppTheme.accent, size: 28),
+            child: const Icon(
+              Icons.quiz_rounded,
+              color: AppTheme.accent,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -240,9 +244,7 @@ class MyContributionsScreen extends ConsumerWidget {
             const SizedBox(height: 32),
             Container(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.primaryDark],
-                ),
+                color: AppTheme.primary,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -258,11 +260,17 @@ class MyContributionsScreen extends ConsumerWidget {
                   onTap: () => Navigator.pushNamed(context, '/create-question'),
                   borderRadius: BorderRadius.circular(16),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.add_circle_outline_rounded, color: AppTheme.background),
+                        const Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: AppTheme.background,
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           'Add Your First Question',
@@ -284,15 +292,19 @@ class MyContributionsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuestionCard(BuildContext context, Map<String, dynamic> question, int index) {
+  Widget _buildQuestionCard(
+    BuildContext context,
+    Map<String, dynamic> question,
+    int index,
+  ) {
     final content = question['content'] ?? 'No content';
     final difficulty = question['difficulty'] ?? 'medium';
     final status = question['status'] ?? 'draft';
     final createdAt = question['createdAt'];
-    
+
     // Parse options if available
     final options = question['options'] as List<dynamic>? ?? [];
-    
+
     Color difficultyColor;
     if (difficulty == 'easy') {
       difficultyColor = AppTheme.success;
@@ -301,7 +313,7 @@ class MyContributionsScreen extends ConsumerWidget {
     } else {
       difficultyColor = AppTheme.secondary;
     }
-    
+
     Color statusColor;
     String statusText;
     if (status == 'approved') {
@@ -330,7 +342,10 @@ class MyContributionsScreen extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: difficultyColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -346,7 +361,10 @@ class MyContributionsScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -383,7 +401,7 @@ class MyContributionsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Question text
           Text(
             content,
@@ -394,23 +412,26 @@ class MyContributionsScreen extends ConsumerWidget {
               height: 1.4,
             ),
           ),
-          
+
           if (options.isNotEmpty) ...[
             const SizedBox(height: 16),
             ...options.map((opt) {
               final isCorrect = opt['id'] == question['correctAnswer'];
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: isCorrect 
-                    ? AppTheme.success.withValues(alpha: 0.1)
-                    : AppTheme.surface,
+                  color: isCorrect
+                      ? AppTheme.success.withValues(alpha: 0.1)
+                      : AppTheme.surface,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isCorrect 
-                      ? AppTheme.success.withValues(alpha: 0.3)
-                      : AppTheme.border.withValues(alpha: 0.3),
+                    color: isCorrect
+                        ? AppTheme.success.withValues(alpha: 0.3)
+                        : AppTheme.border.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -419,9 +440,9 @@ class MyContributionsScreen extends ConsumerWidget {
                       width: 24,
                       height: 24,
                       decoration: BoxDecoration(
-                        color: isCorrect 
-                          ? AppTheme.success 
-                          : AppTheme.surfaceLight,
+                        color: isCorrect
+                            ? AppTheme.success
+                            : AppTheme.surfaceLight,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Center(
@@ -430,7 +451,9 @@ class MyContributionsScreen extends ConsumerWidget {
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isCorrect ? Colors.white : AppTheme.textMuted,
+                            color: isCorrect
+                                ? Colors.white
+                                : AppTheme.textMuted,
                           ),
                         ),
                       ),
@@ -441,19 +464,27 @@ class MyContributionsScreen extends ConsumerWidget {
                         opt['text'] ?? '',
                         style: GoogleFonts.outfit(
                           fontSize: 14,
-                          color: isCorrect ? AppTheme.success : AppTheme.textSecondary,
-                          fontWeight: isCorrect ? FontWeight.w600 : FontWeight.w400,
+                          color: isCorrect
+                              ? AppTheme.success
+                              : AppTheme.textSecondary,
+                          fontWeight: isCorrect
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
                     ),
                     if (isCorrect)
-                      const Icon(Icons.check_rounded, color: AppTheme.success, size: 18),
+                      const Icon(
+                        Icons.check_rounded,
+                        color: AppTheme.success,
+                        size: 18,
+                      ),
                   ],
                 ),
               );
             }),
           ],
-          
+
           if (createdAt != null) ...[
             const SizedBox(height: 12),
             Text(

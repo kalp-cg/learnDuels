@@ -184,9 +184,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
           Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-              ),
+              color: AppTheme.primary,
               borderRadius: BorderRadius.circular(10),
             ),
             child: TextButton(

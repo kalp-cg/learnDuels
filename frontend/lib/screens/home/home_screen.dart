@@ -227,11 +227,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           width: 4,
           height: 28,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTheme.primary, AppTheme.accent],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            color: AppTheme.primary,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -254,14 +250,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primary.withValues(alpha: 0.15),
-            AppTheme.accent.withValues(alpha: 0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppTheme.primary.withValues(alpha: 0.2),
@@ -281,19 +270,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Logo with gradient
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.accent],
-                ).createShader(bounds),
-                child: Text(
-                  'LearnDuels',
-                  style: GoogleFonts.outfit(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -0.5,
-                  ),
+              // Logo
+              Text(
+                'LearnDuels',
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primary,
+                  letterSpacing: -0.5,
                 ),
               ),
               Row(
@@ -398,9 +382,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-              ),
+              color: AppTheme.primary,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -506,11 +488,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primary, AppTheme.accent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: AppTheme.primary,
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: Container(
@@ -531,37 +509,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             width: 68,
                             height: 68,
                             errorBuilder: (_, __, ___) => Center(
-                              child: ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    const LinearGradient(
-                                      colors: [
-                                        AppTheme.primary,
-                                        AppTheme.accent,
-                                      ],
-                                    ).createShader(bounds),
-                                child: Text(
-                                  username[0].toUpperCase(),
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        : Center(
-                            child: ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [AppTheme.primary, AppTheme.accent],
-                              ).createShader(bounds),
                               child: Text(
                                 username[0].toUpperCase(),
                                 style: GoogleFonts.outfit(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: AppTheme.primary,
                                 ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              username[0].toUpperCase(),
+                              style: GoogleFonts.outfit(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primary,
                               ),
                             ),
                           ),
@@ -590,12 +554,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         vertical: 7,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primary.withValues(alpha: 0.2),
-                            AppTheme.accent.withValues(alpha: 0.1),
-                          ],
-                        ),
+                        color: AppTheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: AppTheme.primary.withValues(alpha: 0.3),
@@ -815,19 +774,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: rank <= 3
-                    ? [
-                        rankColor.withValues(alpha: 0.3),
-                        rankColor.withValues(alpha: 0.1),
-                      ]
-                    : [
-                        AppTheme.primary.withValues(alpha: 0.2),
-                        AppTheme.accent.withValues(alpha: 0.1),
-                      ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: rank <= 3
+                  ? rankColor.withValues(alpha: 0.2)
+                  : AppTheme.surfaceLight,
               borderRadius: BorderRadius.circular(14),
             ),
             child: ClipRRect(
