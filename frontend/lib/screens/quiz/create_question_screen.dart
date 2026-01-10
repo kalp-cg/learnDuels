@@ -173,9 +173,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppTheme.primary, AppTheme.primaryDark],
-                          ),
+                          color: AppTheme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Material(
@@ -257,13 +255,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         centerTitle: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.background, Color(0xFF0F1228)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Form(
@@ -275,12 +267,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.accent.withValues(alpha: 0.15),
-                        AppTheme.primary.withValues(alpha: 0.1),
-                      ],
-                    ),
+                    color: AppTheme.accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: AppTheme.accent.withValues(alpha: 0.2),
@@ -466,9 +453,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                 // Submit Button
                 Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primary, AppTheme.primaryDark],
-                    ),
+                    color: AppTheme.primary,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(

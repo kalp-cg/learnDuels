@@ -192,13 +192,7 @@ class _PendingChallengesScreenState
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.background, Color(0xFF0F1228)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: challengesAsync.when(
           data: (data) {
             return TabBarView(
@@ -222,9 +216,7 @@ class _PendingChallengesScreenState
       ),
       floatingActionButton: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppTheme.primary, AppTheme.primaryDark],
-          ),
+          color: AppTheme.primary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -353,11 +345,7 @@ class _PendingChallengesScreenState
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isReceived
-                        ? [AppTheme.accent, const Color(0xFF00C7B1)]
-                        : [AppTheme.primary, AppTheme.primaryDark],
-                  ),
+                  color: isReceived ? AppTheme.accent : AppTheme.primary,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
@@ -451,9 +439,7 @@ class _PendingChallengesScreenState
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.accent, Color(0xFF00C7B1)],
-                      ),
+                      color: AppTheme.accent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Material(

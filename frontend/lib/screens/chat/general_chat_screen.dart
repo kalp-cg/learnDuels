@@ -122,6 +122,18 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
         });
       }
     });
+
+    // Listen for message deletion
+    socketService.on('chat:message_deleted', (data) {
+      if (mounted && data != null) {
+        final deletedId = data['messageId'];
+        setState(() {
+          _messages.removeWhere(
+            (m) => m['id'].toString() == deletedId.toString(),
+          );
+        });
+      }
+    });
   }
 
   void _onTextChanged() {
@@ -148,6 +160,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
       _socketService.off('chat:pinned_message');
       _socketService.off('chat:typing');
       _socketService.off('chat:user_count');
+      _socketService.off('chat:message_deleted');
       _socketService.off('connect');
     }
     _messageController.dispose();
@@ -215,6 +228,11 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
   void _unpinMessage() {
     final socketService = ref.read(socketServiceProvider);
     socketService.emit('chat:unpin', {});
+  }
+
+  void _deleteMessage(String messageId) {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.emit('chat:delete', {'messageId': messageId});
   }
 
   void _scrollToBottom() {
@@ -589,6 +607,18 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                     });
                   },
                 ),
+                if (isMe)
+                  ListTile(
+                    leading: const Icon(Icons.delete, color: Colors.red),
+                    title: const Text(
+                      'Delete Message',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _deleteMessage(msg['id'].toString());
+                    },
+                  ),
               ],
             ),
           );

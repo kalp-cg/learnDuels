@@ -396,13 +396,7 @@ class _DuelScreenState extends ConsumerState<DuelScreen>
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         // Enhanced Gradient Background for Premium Feel
         body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Theme.of(context).scaffoldBackgroundColor, Colors.black],
-            ),
-          ),
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: SafeArea(
             child: duelState.when(
               data: (duelData) {

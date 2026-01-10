@@ -212,13 +212,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
         centerTitle: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.background, Color(0xFF0F1228)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: Column(
           children: [
             // Form inputs
@@ -473,14 +467,9 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  gradient: _selectedQuestionIds.isNotEmpty
-                      ? const LinearGradient(
-                          colors: [AppTheme.primary, AppTheme.primaryDark],
-                        )
-                      : null,
-                  color: _selectedQuestionIds.isEmpty
-                      ? AppTheme.surfaceLight
-                      : null,
+                  color: _selectedQuestionIds.isNotEmpty
+                      ? AppTheme.primary
+                      : AppTheme.surfaceLight,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: _selectedQuestionIds.isNotEmpty
                       ? [

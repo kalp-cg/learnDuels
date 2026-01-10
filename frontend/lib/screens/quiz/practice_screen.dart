@@ -23,6 +23,7 @@ class PracticeScreen extends ConsumerStatefulWidget {
 
 class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   String selectedDifficulty = 'MEDIUM';
+  int selectedQuestionCount = 10;
   int? selectedTopicId;
   bool _isStarting = false;
 
@@ -86,6 +87,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                         loading: () => _buildLoadingSkeleton(height: 50),
                         error: (_, __) => const SizedBox.shrink(),
                       ),
+
+                      const SizedBox(height: 32),
+
+                      // Question Count Section
+                      _buildSectionTitle('Number of Questions'),
+                      const SizedBox(height: 16),
+                      _buildQuestionCountSelector(),
 
                       const SizedBox(height: 32),
 
@@ -172,6 +180,64 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                             context,
                           ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                     letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildQuestionCountSelector() {
+    const counts = [5, 7, 10, 15];
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Row(
+        children: counts.map((count) {
+          final isSelected = selectedQuestionCount == count;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => selectedQuestionCount = count),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$count Questions',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
@@ -346,6 +412,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       final result = await attemptService.startPracticeAttempt(
         selectedTopicId!,
         selectedDifficulty,
+        limit: selectedQuestionCount,
       );
 
       if (mounted) {
