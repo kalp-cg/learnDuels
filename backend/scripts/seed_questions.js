@@ -12,7 +12,8 @@ const fileMap = {
   'next.js': { name: 'Next.js', slug: 'next-js' },
   'node.js': { name: 'Node.js', slug: 'node-js' },
   'python.js': { name: 'Python', slug: 'python' },
-  'react.js': { name: 'React', slug: 'react' }
+  'react.js': { name: 'React', slug: 'react' },
+  'full_stack.js': { name: 'Full Stack Development', slug: 'full-stack' }
 };
 
 async function main() {
