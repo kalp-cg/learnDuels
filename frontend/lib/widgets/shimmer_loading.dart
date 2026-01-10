@@ -19,7 +19,7 @@ class ShimmerBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
       baseColor: AppTheme.surfaceLight,
-      highlightColor: AppTheme.surfaceGlass,
+      highlightColor: AppTheme.surfaceLight,
       child: Container(
         width: width,
         height: height,
@@ -43,7 +43,7 @@ class ShimmerUserCard extends StatelessWidget {
       decoration: AppTheme.glassDecoration(borderRadius: 24),
       child: Shimmer.fromColors(
         baseColor: AppTheme.surfaceLight,
-        highlightColor: AppTheme.surfaceGlass,
+        highlightColor: AppTheme.surfaceLight,
         child: Column(
           children: [
             Row(
@@ -111,13 +111,11 @@ class ShimmerPlayerItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.border.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
       ),
       child: Shimmer.fromColors(
         baseColor: AppTheme.surfaceLight,
-        highlightColor: AppTheme.surfaceGlass,
+        highlightColor: AppTheme.surfaceLight,
         child: Row(
           children: [
             Container(
@@ -166,16 +164,13 @@ class ShimmerPlayerItem extends StatelessWidget {
 /// Shimmer skeleton for loading leaderboard list
 class ShimmerPlayerList extends StatelessWidget {
   final int itemCount;
-  
+
   const ShimmerPlayerList({super.key, this.itemCount = 5});
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: List.generate(
-        itemCount,
-        (_) => const ShimmerPlayerItem(),
-      ),
+      children: List.generate(itemCount, (_) => const ShimmerPlayerItem()),
     );
   }
 }

@@ -62,11 +62,7 @@ class _AnimatedActionButtonState extends State<AnimatedActionButton>
         child: Container(
           height: 140,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.white, widget.color.withValues(alpha: 0.03)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: widget.color.withValues(alpha: 0.15),
@@ -93,14 +89,7 @@ class _AnimatedActionButtonState extends State<AnimatedActionButton>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      widget.color.withValues(alpha: 0.15),
-                      widget.color.withValues(alpha: 0.08),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: widget.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -352,11 +341,7 @@ class _StreakBadgeState extends State<StreakBadge>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFF6B35), Color(0xFFFF3366)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: const Color(0xFFFF6B35),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -399,14 +384,7 @@ class DailyChallengeBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.accent.withValues(alpha: 0.2),
-              AppTheme.secondary.withValues(alpha: 0.15),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppTheme.accent.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
         ),

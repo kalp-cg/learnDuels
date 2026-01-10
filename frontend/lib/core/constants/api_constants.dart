@@ -6,7 +6,7 @@ class ApiConstants {
   // For Android Emulator use 10.0.2.2, for iOS use localhost
   static String get baseUrl {
     // AWS Backend URL for testing
-    return 'http://ec2-15-206-187-220.ap-south-1.compute.amazonaws.com:4000/api';
+    return 'https://app.codinggita.space/api';
 
     /* Original logic preserved:
     // FORCE localhost for web debugging

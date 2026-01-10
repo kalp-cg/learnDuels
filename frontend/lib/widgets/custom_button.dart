@@ -22,14 +22,7 @@ class CustomButton extends StatelessWidget {
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: backgroundColor != null
-              ? [backgroundColor!, backgroundColor!]
-              : [
-                  Theme.of(context).primaryColor,
-                  Theme.of(context).primaryColor, // Flat color preferred for playful style, or subtle gradient
-                ],
-        ),
+        color: backgroundColor ?? Theme.of(context).primaryColor,
         borderRadius: BorderRadius.circular(100), // Pill shape
         boxShadow: [
           BoxShadow(

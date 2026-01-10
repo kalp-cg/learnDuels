@@ -12,12 +12,13 @@ class AttemptService {
 
   Future<Map<String, dynamic>> startPracticeAttempt(
     int topicId,
-    String difficulty,
-  ) async {
+    String difficulty, {
+    int limit = 10,
+  }) async {
     final token = await _getToken();
     final response = await _api.client.post(
       '/attempts/practice',
-      data: {'topicId': topicId, 'difficulty': difficulty},
+      data: {'topicId': topicId, 'difficulty': difficulty, 'limit': limit},
       options: Options(
         headers: token != null ? {'Authorization': 'Bearer $token'} : null,
       ),
