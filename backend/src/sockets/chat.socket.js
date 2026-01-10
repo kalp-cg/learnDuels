@@ -173,6 +173,42 @@ function registerEvents(socket, io) {
       isTyping
     });
   });
+
+  // Handle deleting messages
+  socket.on('chat:delete', async (data) => {
+    try {
+      const { messageId } = data;
+      if (!messageId) return;
+
+      // Verify ownership
+      const message = await prisma.message.findUnique({
+        where: { id: parseInt(messageId) },
+        select: { senderId: true }
+      });
+
+      if (!message) {
+        socket.emit('chat:error', { message: 'Message not found' });
+        return;
+      }
+
+      if (message.senderId !== socket.userId) {
+        socket.emit('chat:error', { message: 'Not authorized to delete this message' });
+        return;
+      }
+
+      // Delete from DB
+      await prisma.message.delete({
+        where: { id: parseInt(messageId) }
+      });
+
+      // Broadcast deletion
+      io.to(GENERAL_ROOM).emit('chat:message_deleted', { messageId });
+
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      socket.emit('chat:error', { message: 'Failed to delete message' });
+    }
+  });
 }
 
 module.exports = {
