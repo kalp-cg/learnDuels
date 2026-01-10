@@ -23,7 +23,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Main animation controller
     _controller = AnimationController(
       vsync: this,
@@ -36,29 +36,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       duration: const Duration(milliseconds: 2000),
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.6,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.8, curve: Curves.elasticOut),
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.elasticOut),
+      ),
+    );
 
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.15,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     _handleSplashFlow();
   }
@@ -70,10 +64,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     // Check auth in parallel
     final authService = ref.read(authServiceProvider);
-    
+
     // Check if user is already logged in
     final isLoggedIn = await authService.isLoggedIn();
-    
+
     debugPrint('🔐 Auth Check: isLoggedIn = $isLoggedIn');
 
     // Wait for animation to complete + small buffer
@@ -103,31 +97,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          // Premium dark gradient background
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF0A0E21),
-              Color(0xFF0F1228),
-              Color(0xFF151A36),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: SafeArea(
           child: Stack(
             children: [
-              // Animated background particles/orbs
-              _buildBackgroundEffects(),
-              
               // Main content
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Spacer(flex: 2),
-                    
+
                     // Logo Animation with Glow
                     ScaleTransition(
                       scale: _scaleAnimation,
@@ -145,45 +125,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
-                    // App Name with gradient
+
+                    // App Name
                     FadeTransition(
                       opacity: _fadeAnimation,
-                      child: ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [
-                            AppTheme.primary,
-                            AppTheme.accent,
-                          ],
-                        ).createShader(bounds),
-                        child: Text(
-                          'LearnDuels',
-                          style: GoogleFonts.outfit(
-                            fontSize: 44,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: -1.0,
-                          ),
+                      child: Text(
+                        'LearnDuels',
+                        style: GoogleFonts.outfit(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primary,
+                          letterSpacing: -1.0,
                         ),
                       ),
                     ),
-                    
+
                     const Spacer(flex: 1),
-                    
+
                     // Bottom Section with Buttons
                     AnimatedOpacity(
                       opacity: _showButtons ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 600),
                       child: AnimatedSlide(
-                        offset: _showButtons ? Offset.zero : const Offset(0, 0.3),
+                        offset: _showButtons
+                            ? Offset.zero
+                            : const Offset(0, 0.3),
                         duration: const Duration(milliseconds: 600),
                         curve: Curves.easeOutCubic,
                         child: _buildBottomSection(),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -195,143 +169,44 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
   }
 
-  Widget _buildBackgroundEffects() {
-    return Positioned.fill(
-      child: AnimatedBuilder(
-        animation: _fadeAnimation,
-        builder: (context, child) {
-          return Opacity(
-            opacity: _fadeAnimation.value * 0.6,
-            child: Stack(
-              children: [
-                // Top-left orb
-                Positioned(
-                  top: -100,
-                  left: -100,
-                  child: Container(
-                    width: 300,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppTheme.primary.withValues(alpha: 0.3),
-                          AppTheme.primary.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Bottom-right orb
-                Positioned(
-                  bottom: -150,
-                  right: -100,
-                  child: Container(
-                    width: 400,
-                    height: 400,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppTheme.accent.withValues(alpha: 0.25),
-                          AppTheme.accent.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Center subtle orb
-                Positioned(
-                  top: MediaQuery.of(context).size.height * 0.3,
-                  left: MediaQuery.of(context).size.width * 0.2,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppTheme.secondary.withValues(alpha: 0.15),
-                          AppTheme.secondary.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildLogo() {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primary.withValues(alpha: 0.15),
-            AppTheme.accent.withValues(alpha: 0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary.withValues(alpha: 0.1),
         border: Border.all(
           color: AppTheme.primary.withValues(alpha: 0.3),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.4),
+            color: AppTheme.primary.withValues(alpha: 0.2),
             blurRadius: 40,
             spreadRadius: 5,
           ),
-          BoxShadow(
-            color: AppTheme.accent.withValues(alpha: 0.2),
-            blurRadius: 60,
-            spreadRadius: 10,
-          ),
         ],
       ),
-      child: ShaderMask(
-        shaderCallback: (bounds) => const LinearGradient(
-          colors: [AppTheme.primary, AppTheme.accent],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ).createShader(bounds),
-        child: const Icon(
-          Icons.bolt_rounded,
-          size: 80,
-          color: Colors.white,
-        ),
-      ),
+      child: const Icon(Icons.code_rounded, size: 80, color: AppTheme.primary),
     );
   }
 
   Widget _buildBottomSection() {
     return Column(
       children: [
-        // Tagline with gradient
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [AppTheme.primary, AppTheme.tertiary],
-          ).createShader(bounds),
-          child: Text(
-            'Challenge. Learn. Win.',
-            style: GoogleFonts.outfit(
-              fontSize: 18,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2.0,
-            ),
+        // Tagline
+        Text(
+          'Challenge. Learn. Win.',
+          style: GoogleFonts.outfit(
+            fontSize: 18,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2.0,
           ),
         ),
-        
+
         const SizedBox(height: 40),
-        
+
         // Buttons
         if (_showButtons) ...[
           Padding(
@@ -339,14 +214,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Get Started Button - Gradient
+                // Get Started Button
                 Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primary, AppTheme.primaryDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: AppTheme.primary,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -369,7 +240,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           style: GoogleFonts.outfit(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: AppTheme.background,
+                            color: AppTheme.surface,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -377,9 +248,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Login Button - Glass Style
                 Container(
                   decoration: BoxDecoration(

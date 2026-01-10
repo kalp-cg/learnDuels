@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../core/services/user_service.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../core/theme.dart';
 import 'signup_screen.dart';
@@ -123,13 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.background, Color(0xFF0F1228), Color(0xFF151A36)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: SafeArea(
           child: Stack(
             children: [
@@ -155,20 +148,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             const SizedBox(height: 40),
 
                             // Welcome text
-                            ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [AppTheme.primary, AppTheme.accent],
-                              ).createShader(bounds),
-                              child: Text(
-                                'Welcome Back',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
-                                ),
-                                textAlign: TextAlign.center,
+                            Text(
+                              'Welcome Back',
+                              style: GoogleFonts.outfit(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                                letterSpacing: -0.5,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -497,21 +485,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       ),
                                     );
                                   },
-                                  child: ShaderMask(
-                                    shaderCallback: (bounds) =>
-                                        const LinearGradient(
-                                          colors: [
-                                            AppTheme.primary,
-                                            AppTheme.accent,
-                                          ],
-                                        ).createShader(bounds),
-                                    child: Text(
-                                      'Sign Up',
-                                      style: GoogleFonts.outfit(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 15,
-                                      ),
+                                  child: Text(
+                                    'Sign Up',
+                                    style: GoogleFonts.outfit(
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 ),
@@ -575,46 +554,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Widget _buildBackgroundEffects() {
-    return Stack(
-      children: [
-        // Top-left orb
-        Positioned(
-          top: -80,
-          left: -80,
-          child: Container(
-            width: 250,
-            height: 250,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  AppTheme.primary.withValues(alpha: 0.2),
-                  AppTheme.primary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Bottom-right orb
-        Positioned(
-          bottom: -100,
-          right: -80,
-          child: Container(
-            width: 300,
-            height: 300,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  AppTheme.accent.withValues(alpha: 0.15),
-                  AppTheme.accent.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+    return const SizedBox();
   }
 
   Widget _buildLogo() {
@@ -623,14 +563,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.primary.withValues(alpha: 0.15),
-              AppTheme.accent.withValues(alpha: 0.1),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppTheme.primary.withValues(alpha: 0.1),
           border: Border.all(
             color: AppTheme.primary.withValues(alpha: 0.3),
             width: 2,
@@ -643,13 +576,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
           ],
         ),
-        child: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [AppTheme.primary, AppTheme.accent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ).createShader(bounds),
-          child: const Icon(Icons.bolt_rounded, size: 56, color: Colors.white),
+        child: const Icon(
+          Icons.bolt_rounded,
+          size: 56,
+          color: AppTheme.primary,
         ),
       ),
     );
@@ -658,11 +588,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Widget _buildLoginButton(bool isLoading) {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primary, AppTheme.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

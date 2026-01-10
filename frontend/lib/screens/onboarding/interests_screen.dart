@@ -11,13 +11,15 @@ final topicsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   final api = ApiService();
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  
+
   try {
     final response = await api.client.get(
       '/topics',
-      options: token != null ? Options(headers: {'Authorization': 'Bearer $token'}) : null,
+      options: token != null
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null,
     );
-    
+
     if (response.data['success'] == true) {
       return response.data['data'] ?? [];
     }
@@ -43,7 +45,10 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
     if (_selectedTopics.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please select at least one topic', style: GoogleFonts.outfit()),
+          content: Text(
+            'Please select at least one topic',
+            style: GoogleFonts.outfit(),
+          ),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -56,7 +61,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
       final api = ApiService();
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken');
-      
+
       // Save interests to user profile
       await api.client.put(
         '/users/me',
@@ -90,13 +95,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.background, Color(0xFF0F1228)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.background,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -104,14 +103,12 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                
+
                 // Header
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppTheme.primary.withValues(alpha: 0.15), AppTheme.accent.withValues(alpha: 0.1)],
-                    ),
+                    color: AppTheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -122,7 +119,11 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                           color: AppTheme.primary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.interests_rounded, color: AppTheme.primary, size: 28),
+                        child: const Icon(
+                          Icons.interests_rounded,
+                          color: AppTheme.primary,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -140,7 +141,10 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'Select topics to personalize your experience',
-                              style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textSecondary),
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: AppTheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -149,10 +153,13 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Topic selection count
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceLight,
                     borderRadius: BorderRadius.circular(20),
@@ -161,29 +168,37 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                     '${_selectedTopics.length} selected',
                     style: GoogleFonts.outfit(
                       fontSize: 13,
-                      color: _selectedTopics.isNotEmpty ? AppTheme.primary : AppTheme.textMuted,
+                      color: _selectedTopics.isNotEmpty
+                          ? AppTheme.primary
+                          : AppTheme.textMuted,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Topics grid
                 Expanded(
                   child: topicsAsync.when(
                     data: (topics) {
                       if (topics.isEmpty) {
                         return Center(
-                          child: Text('No topics available', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+                          child: Text(
+                            'No topics available',
+                            style: GoogleFonts.outfit(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
                         );
                       }
                       return GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 1.5,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 14,
+                              mainAxisSpacing: 14,
+                              childAspectRatio: 1.5,
+                            ),
                         itemCount: topics.length,
                         itemBuilder: (context, index) {
                           final topic = topics[index];
@@ -191,25 +206,37 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                         },
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primary),
+                    ),
                     error: (e, s) => Center(
-                      child: Text('Error loading topics', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+                      child: Text(
+                        'Error loading topics',
+                        style: GoogleFonts.outfit(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Continue button
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    gradient: _selectedTopics.isNotEmpty
-                        ? const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark])
-                        : null,
-                    color: _selectedTopics.isEmpty ? AppTheme.surfaceLight : null,
+                    color: _selectedTopics.isNotEmpty
+                        ? AppTheme.primary
+                        : AppTheme.surfaceLight,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: _selectedTopics.isNotEmpty
-                        ? [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))]
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primary.withValues(alpha: 0.4),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
                         : null,
                   ),
                   child: Material(
@@ -224,7 +251,10 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -234,13 +264,17 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                                       style: GoogleFonts.outfit(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
-                                        color: _selectedTopics.isNotEmpty ? Colors.white : AppTheme.textMuted,
+                                        color: _selectedTopics.isNotEmpty
+                                            ? Colors.white
+                                            : AppTheme.textMuted,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Icon(
                                       Icons.arrow_forward_rounded,
-                                      color: _selectedTopics.isNotEmpty ? Colors.white : AppTheme.textMuted,
+                                      color: _selectedTopics.isNotEmpty
+                                          ? Colors.white
+                                          : AppTheme.textMuted,
                                     ),
                                   ],
                                 ),
@@ -249,7 +283,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                     ),
                   ),
                 ),
-                
+
                 // Skip button
                 const SizedBox(height: 12),
                 Center(
@@ -258,12 +292,19 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setBool('onboardingComplete', true);
                       if (mounted) {
-                        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/home',
+                          (route) => false,
+                        );
                       }
                     },
                     child: Text(
                       'Skip for now',
-                      style: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 14),
+                      style: GoogleFonts.outfit(
+                        color: AppTheme.textMuted,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -283,9 +324,11 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
     // Icon mapping
     IconData icon;
     Color iconColor;
-    
+
     final nameLower = name.toString().toLowerCase();
-    if (nameLower.contains('science') || nameLower.contains('physics') || nameLower.contains('chemistry')) {
+    if (nameLower.contains('science') ||
+        nameLower.contains('physics') ||
+        nameLower.contains('chemistry')) {
       icon = Icons.science_rounded;
       iconColor = const Color(0xFF9C27B0);
     } else if (nameLower.contains('math')) {
@@ -303,13 +346,18 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
     } else if (nameLower.contains('music') || nameLower.contains('art')) {
       icon = Icons.music_note_rounded;
       iconColor = const Color(0xFFE91E63);
-    } else if (nameLower.contains('tech') || nameLower.contains('computer') || nameLower.contains('programming')) {
+    } else if (nameLower.contains('tech') ||
+        nameLower.contains('computer') ||
+        nameLower.contains('programming')) {
       icon = Icons.computer_rounded;
       iconColor = const Color(0xFF00BCD4);
-    } else if (nameLower.contains('literature') || nameLower.contains('english')) {
+    } else if (nameLower.contains('literature') ||
+        nameLower.contains('english')) {
       icon = Icons.menu_book_rounded;
       iconColor = const Color(0xFF607D8B);
-    } else if (nameLower.contains('movie') || nameLower.contains('film') || nameLower.contains('entertainment')) {
+    } else if (nameLower.contains('movie') ||
+        nameLower.contains('film') ||
+        nameLower.contains('entertainment')) {
       icon = Icons.movie_rounded;
       iconColor = const Color(0xFFFFC107);
     } else {
@@ -330,14 +378,24 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected ? iconColor.withValues(alpha: 0.15) : AppTheme.surfaceLight,
+          color: isSelected
+              ? iconColor.withValues(alpha: 0.15)
+              : AppTheme.surfaceLight,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? iconColor : AppTheme.border.withValues(alpha: 0.3),
+            color: isSelected
+                ? iconColor
+                : AppTheme.border.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
-              ? [BoxShadow(color: iconColor.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4))]
+              ? [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Stack(
@@ -351,7 +409,9 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: isSelected ? 0.2 : 0.1),
+                      color: iconColor.withValues(
+                        alpha: isSelected ? 0.2 : 0.1,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: iconColor, size: 24),
@@ -380,7 +440,11 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                     color: iconColor,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                 ),
               ),
           ],
