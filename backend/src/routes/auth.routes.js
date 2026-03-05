@@ -4,78 +4,12 @@
  */
 
 const express = require('express');
-const passport = require('passport');
 const { body } = require('express-validator');
 const { authenticateToken, authRateLimit } = require('../middlewares/auth.middleware');
 const { handleValidationErrors, userValidation } = require('../utils/validators');
-const { asyncHandler } = require('../middlewares/error.middleware');
-const { generateTokenPair } = require('../utils/token');
-const { prisma } = require('../config/db');
+const authController = require('../controllers/auth.controller');
 
 const router = express.Router();
-
-// Import controllers (will be created next)
-const authController = {
-  signup: asyncHandler(async (req, res) => {
-    const authService = require('../services/auth.service');
-    const { user, tokens } = await authService.register(req.body);
-    res.status(201).json({
-      success: true,
-      message: 'Account created successfully',
-      data: {
-        user,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      },
-    });
-  }),
-
-  login: asyncHandler(async (req, res) => {
-    const authService = require('../services/auth.service');
-    const { user, tokens } = await authService.login(req.body);
-    res.json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        user,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      },
-    });
-  }),
-
-  refreshToken: asyncHandler(async (req, res) => {
-    const { refreshToken } = req.body;
-    const authService = require('../services/auth.service');
-    const tokens = await authService.refreshTokens(refreshToken);
-    res.json({
-      success: true,
-      message: 'Tokens refreshed successfully',
-      data: tokens,
-    });
-  }),
-
-  logout: asyncHandler(async (req, res) => {
-    const { refreshToken } = req.body;
-    if (refreshToken) {
-      const authService = require('../services/auth.service');
-      await authService.logout(refreshToken);
-    }
-    res.json({
-      success: true,
-      message: 'Logged out successfully',
-    });
-  }),
-
-  changePassword: asyncHandler(async (req, res) => {
-    const authService = require('../services/auth.service');
-    await authService.changePassword(req.userId, req.body);
-    res.json({
-      success: true,
-      message: 'Password changed successfully',
-    });
-  }),
-};
 
 // POST /api/auth/signup
 router.post(
@@ -102,6 +36,13 @@ router.post(
   userValidation.login,
   handleValidationErrors,
   authController.login
+);
+
+// POST /api/auth/google
+router.post(
+  '/google',
+  authRateLimit(5, 15 * 60 * 1000), // 5 attempts per 15 minutes
+  authController.googleLogin
 );
 
 // POST /api/auth/logout
@@ -162,11 +103,7 @@ router.post(
     body('email').isEmail().withMessage('Valid email is required'),
   ],
   handleValidationErrors,
-  asyncHandler(async (req, res) => {
-    const authService = require('../services/auth.service');
-    const result = await authService.forgotPassword(req.body.email);
-    res.json(result);
-  })
+  authController.forgotPassword
 );
 
 // POST /api/auth/reset-password
@@ -182,24 +119,14 @@ router.post(
       .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
   ],
   handleValidationErrors,
-  asyncHandler(async (req, res) => {
-    const authService = require('../services/auth.service');
-    const { token, newPassword } = req.body;
-    const result = await authService.resetPassword(token, newPassword);
-    res.json(result);
-  })
+  authController.resetPassword
 );
 
 // GET /api/auth/me - Get current user
-router.get('/me', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    message: 'User profile retrieved successfully',
-    data: req.user,
-  });
-});
+router.get('/me', authenticateToken, authController.getMe);
 
-// OAuth removed - Flutter web doesn't support URL schemes for OAuth redirects
-// Use email/password authentication instead
+// Google OAuth Routes
+const googleAuthRoutes = require('./googleAuth.routes');
+router.use('/google', googleAuthRoutes);
 
 module.exports = router;

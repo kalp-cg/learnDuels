@@ -406,7 +406,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                                   ),
                                                   backgroundColor:
                                                       AppTheme.success,
-                                                ),
+                                                  ),
                                               );
                                               Navigator.of(
                                                 context,

@@ -508,7 +508,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             fit: BoxFit.cover,
                             width: 68,
                             height: 68,
-                            errorBuilder: (_, __, ___) => Center(
+                            errorBuilder: (_, _, _) => Center(
                               child: Text(
                                 username[0].toUpperCase(),
                                 style: GoogleFonts.outfit(

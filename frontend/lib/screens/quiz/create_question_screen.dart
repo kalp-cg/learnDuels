@@ -311,8 +311,9 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                   controller: _questionController,
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Required';
-                    if (v.length < 5)
+                    if (v.length < 5) {
                       return 'Question must be at least 5 characters';
+                    }
                     return null;
                   },
                 ),

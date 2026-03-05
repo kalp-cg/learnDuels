@@ -1,260 +1,144 @@
-<div align="center">
+# LearnDules - Competitive Learning Platform
 
-# ⚔️ LearnDuels
-
-### 🎮 The Ultimate Real-Time Multiplayer Quiz Battle Platform
-
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://choosealicense.com/licenses/mit/)
-[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
-[![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
-
-<br/>
-
-> 🚀 **Challenge friends. Climb leaderboards. Master knowledge.** 🚀
-
-*Transform boring study sessions into exciting 1v1 quiz battles!*
-
-<br/>
+**LearnDules** is a cross-platform (Mobile & Web) competitive learning application designed to gamify the process of mastering Computer Science (CS) topics. It combines structured learning paths with real-time PvP battles, social features, and a comprehensive leveling system.
 
 ---
 
-</div>
+## 🏗️ System Architecture
 
-## 🌟 What is LearnDuels?
+The system is built on a scalable microservices-like architecture (modular monolith) designed to handle real-time interactions and high-concurrency requests.
 
-**LearnDuels** is a gamified learning platform where knowledge meets competition. Challenge your friends or random opponents to real-time quiz duels across various subjects — from Mathematics to History, Science to Pop Culture.
+### **Tech Stack**
 
-<div align="center">
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | Flutter | Cross-platform (iOS, Android, Web) UI with Riverpod for state management. |
+| **Backend** | Node.js (Express) | REST API and WebSocket server. |
+| **Real-time** | Socket.IO | Bi-directional communication for duels, challenges, and chat. |
+| **Database** | PostgreSQL | Relational data persistence (managed via Prisma ORM). |
+| **Caching/State** | Redis | Session store, Socket.IO adapter for clustering, and temporary duel state. |
+| **Storage** | Cloudinary | Media asset storage (avatars, question images). |
 
-| 🎯 **Challenge** | ⚡ **Compete** | 🏆 **Conquer** |
-|:---:|:---:|:---:|
-| Send duel invites to friends | Answer questions in real-time | Rise up the global leaderboards |
-
-</div>
-
----
-
-## ✨ Features
-
-<table>
-<tr>
-<td width="50%">
-
-### ⚔️ Real-Time 1v1 Duels
-Battle head-to-head with live score updates. Feel the adrenaline as you race against your opponent!
-
-### 🎯 Practice Mode
-Sharpen your skills solo before challenging others. Track your progress and identify weak areas.
-
-### 👥 Friend Challenges
-Send direct challenges to friends. Prove who's the ultimate knowledge champion!
-
-</td>
-<td width="50%">
-
-### 🏆 Global Leaderboards
-Compete for the top spot on global, regional, and friend rankings. Earn your bragging rights!
-
-### 📚 Multiple Categories
-Choose from 10+ subjects including Math, Science, History, Geography, and more!
-
-### 🔔 Push Notifications
-Never miss a challenge! Get instant alerts for invites, results, and friend activities.
-
-</td>
-</tr>
-</table>
-
----
-
-## 🏗️ Architecture
+### **Connection Flow**
 
 ```mermaid
-graph TB
-    subgraph "📱 Client Layer"
-        A[Flutter Mobile App]
+graph TD
+    Client[Flutter Client] -->|REST API| API_Gateway[Express Router]
+    Client -->|WebSocket| Socket_Server[Socket.IO Gateway]
+
+    subgraph "Backend Services"
+        API_Gateway --> Auth_Service[Auth Service]
+        API_Gateway --> User_Service[User Service]
+        API_Gateway --> Content_Service[Learning Content]
+        
+        Socket_Server --> Auth_MW[Auth Middleware]
+        Auth_MW --> Duel_Manager[Duel Socket Handler]
+        Auth_MW --> Chat_Manager[Chat Socket Handler]
     end
-    
-    subgraph "🌐 API Gateway"
-        B[Express.js REST API]
-        C[Socket.IO Server]
+
+    subgraph "Data Layer"
+        Duel_Manager -->|Ephemeral State| Redis[(Redis Cache)]
+        Auth_Service & User_Service & Content_Service -->|Persistent Data| DB[(PostgreSQL)]
     end
-    
-    subgraph "💾 Data Layer"
-        D[(PostgreSQL)]
-        E[(Redis Cache)]
-    end
-    
-    A -->|HTTP/REST| B
-    A <-->|WebSocket| C
-    B --> D
-    B --> E
-    C --> E
-    
-    style A fill:#02569B,color:#fff
-    style B fill:#68a063,color:#fff
-    style C fill:#010101,color:#fff
-    style D fill:#336791,color:#fff
-    style E fill:#DC382D,color:#fff
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 🔌 Real-Time Socket Architecture
 
-<div align="center">
+The core of the competitive mode lies in its WebSocket implementation (`backend/src/sockets`).
 
-| Layer | Technology |
-|:---:|:---:|
-| **Frontend** | Flutter • Dart • Provider • Dio • Socket.IO Client |
-| **Backend** | Node.js • Express.js • Socket.IO • JWT • Passport.js |
-| **Database** | PostgreSQL • Prisma ORM • Redis |
-| **DevOps** | Docker • Docker Compose |
+### **Socket Initialization (`src/sockets/index.js`)**
+1.  **Connection**: The server initializes `Socket.IO` attached to the HTTP server.
+2.  **Redis Adapter**: Configured to support horizontal scaling (multiple backend instances).
+3.  **Authentication**: A middleware intercepts every handshake:
+    *   Extracts JWT from headers.
+    *   Verifies via `verifyAccessToken`.
+    *   Injects User data (`userId`, `username`, `email`) into the socket object.
 
-</div>
+### **Event Handlers**
+The socket logic is modularized into distinct namespaces/handlers:
 
----
+*   **Duel Socket (`duel.socket.js`):**
+    *   **Room Management**: Uses Redis to store the state of active battles (`room:{id}`).
+    *   **Flow**: `join_duel` -> `ready_check` -> `match_start` -> `submit_answer` -> `match_end`.
+    *   **State Sync**: Periodically syncs partial scores and timer events.
+    *   **Persistence**: Upon match completion, results are flushed from Redis to PostgreSQL (`DuelResult` table).
 
-## 🚀 Quick Start
+*   **Challenge Socket (`challenge.socket.js`):**
+    *   Handles real-time invitations (`send_challenge`, `accept_challenge`).
+    *   Notifications for challenge status updates.
 
-### Prerequisites
-
-- **Node.js** v18+
-- **Flutter** 3.0+
-- **PostgreSQL** 14+
-- **Redis** (optional, for caching)
-
-### 1️⃣ Clone the Repository
-
-```bash
-git clone https://github.com/yourusername/learnDuels.git
-cd learnDuels
-```
-
-### 2️⃣ Backend Setup
-
-```bash
-cd backend
-
-# Install dependencies
-npm install
-
-# Setup environment
-cp .env.example .env
-# Edit .env with your database credentials
-
-# Run database migrations
-npx prisma migrate dev
-npx prisma generate
-
-# Start the server
-npm run dev
-```
-
-> 🌐 Backend runs on `http://localhost:4000`
-
-### 3️⃣ Frontend Setup
-
-```bash
-cd frontend
-
-# Get Flutter packages
-flutter pub get
-
-# Run on your device/emulator
-flutter run
-```
-
-### 🐳 Docker (Recommended)
-
-```bash
-# Start everything with one command
-docker-compose up -d
-
-# That's it! 🎉
-```
+*   **Chat Socket (`chat.socket.js`):**
+    *   Handles global or room-based chat (if enabled).
 
 ---
 
-## 📁 Project Structure
+## ✅ Completed Features
 
+This section tracks the active development status of the LearnDules platform.
+
+### **1. Authentication & Integrity**
+- [x] **Email/Password Auth**: With encryption and secure session management.
+- [x] **Google OAuth**: One-tap sign-in.
+- [x] **JWT Security**: Access and Refresh Token rotation policies.
+- [x] **Password Recovery**: Email-based reset tokens.
+
+### **2. User Profile & Social**
+- [x] **Profile Management**: Avatars (Cloudinary), Bio, Personal Stats.
+- [x] **Follow System**:
+    - "Follow" and "Unfollow" actions.
+    - **Follow Request System**: Private/Public profile logic where users must approve requests.
+    - Pending Request management (Accept/Decline).
+- [x] **Activity Tracking**: Streak counters, XP tracking, and Leveling logic.
+
+### **3. Learning Module**
+- [x] **Topic Hierarchy**: Subjects (e.g., Programming) -> Topics (e.g., Python) -> Subtopics.
+- [x] **Practice Mode**: Solo practice with immediate feedback.
+- [x] **Content Management**: Admin tools to create/edit MCQs (Multiple Choice Questions) with explanations.
+- [x] **Quizzes**: Structured sets of questions for assessment.
+
+### **4. Competitive Engine (The "Dules")**
+- [x] **1v1 Duels**: Live PvP battles on specific topics.
+- [x] **Real-Time Scoring**: Score calculation based on accuracy + speed.
+- [x] **Matchmaking**: Basic logic to find opponents or challenge specific friends.
+- [x] **Spectator Mode**: Ability to watch ongoing matches (Backend support implemented).
+
+### **5. Gamification**
+- [x] **XP System**: Experience points awarded for various actions.
+- [x] **Leaderboards**: Global rankings based on Elo/Rating or XP.
+- [x] **Statistics**: Detailed breakdown of win/loss ratios and topic mastery.
+
+---
+
+## 📂 Project Structure
+
+### **Backend (`/backend`)**
+```text
+src/
+├── app.js               # Express App definition
+├── server.js            # Server Entry Point (HTTP + Socket)
+├── config/              # Env, Database, Redis config
+├── controllers/         # Request handlers (API logic)
+├── services/            # Business logic layer (DB interactions)
+├── models/              # Data models (Prisma extras)
+├── routes/              # API Route definitions
+├── sockets/             # WebSocket event handlers
+│   ├── index.js         # Socket Init & Auth
+│   ├── duel.socket.js   # PvP Logic
+│   └── ...
+└── utils/               # Helpers (Error handling, Token utils)
+prisma/
+└── schema.prisma        # Database Schema
 ```
-📦 learnDuels
-├── 📂 backend/              # Node.js API Server
-│   ├── 📂 src/
-│   │   ├── 📂 controllers/  # Route handlers
-│   │   ├── 📂 services/     # Business logic
-│   │   ├── 📂 sockets/      # WebSocket handlers
-│   │   └── 📂 middlewares/  # Auth, validation
-│   └── 📂 prisma/           # Database schema
-│
-├── 📂 frontend/             # Flutter Mobile App
-│   └── 📂 lib/
-│       ├── 📂 screens/      # UI screens
-│       ├── 📂 widgets/      # Reusable components
-│       └── 📂 core/         # Services & utilities
-│
-└── 📜 docker-compose.yml    # Container orchestration
+
+### **Frontend (`/frontend`)**
+```text
+lib/
+├── main.dart            # App Entry Point
+├── core/                # Theme, Constants, Utils
+├── models/              # Dart Data classes
+├── providers/           # Riverpod State Providers
+├── screens/             # UI Pages (Auth, Duel, Home, etc.)
+└── widgets/             # Reusable UI Components
 ```
-
----
-
-## 🎮 How It Works
-
-```mermaid
-sequenceDiagram
-    participant P1 as Player 1
-    participant S as Server
-    participant P2 as Player 2
-    
-    P1->>S: 🎯 Create Duel
-    S->>P2: 📩 Duel Invitation
-    P2->>S: ✅ Accept Duel
-    S->>P1: 🚀 Game Started!
-    S->>P2: 🚀 Game Started!
-    
-    loop Each Question
-        S->>P1: ❓ Question
-        S->>P2: ❓ Question
-        P1->>S: 📝 Answer
-        P2->>S: 📝 Answer
-        S->>P1: 📊 Live Score Update
-        S->>P2: 📊 Live Score Update
-    end
-    
-    S->>P1: 🏆 Final Results
-    S->>P2: 🏆 Final Results
-```
-
----
-
-## 🤝 Contributing
-
-Contributions are always welcome! Here's how you can help:
-
-1. 🍴 **Fork** the repository
-2. 🌿 Create a **feature branch** (`git checkout -b feature/amazing-feature`)
-3. 💾 **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. 📤 **Push** to the branch (`git push origin feature/amazing-feature`)
-5. 🔃 Open a **Pull Request**
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-### 💖 Made with Love by the LearnDuels Team
-
-**⭐ Star this repo if you find it helpful! ⭐**
-
-[Report Bug](../../issues) · [Request Feature](../../issues)
-
-</div>

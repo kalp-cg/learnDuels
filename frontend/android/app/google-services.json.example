@@ -1,0 +1,47 @@
+{
+    "project_info": {
+        "project_number": "171390706156",
+        "project_id": "learnduels",
+        "storage_bucket": "learnduels.appspot.com"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:171390706156:android:abc123",
+                "android_client_info": {
+                    "package_name": "com.learnduels.frontend_new"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "171390706156-4qmvle07jv2st82kserg2v3lvjp2ri5p.apps.googleusercontent.com",
+                    "client_type": 1,
+                    "android_info": {
+                        "package_name": "com.learnduels.frontend_new",
+                        "certificate_hash": "66e6c01a68a8aec8e60419a9dddd6f705f7892c8"
+                    }
+                },
+                {
+                    "client_id": "171390706156-v9947fn6ttjjq82gqf515ec2cele988d.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDummyKeyForGoogleSignIn123456789"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "171390706156-v9947fn6ttjjq82gqf515ec2cele988d.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

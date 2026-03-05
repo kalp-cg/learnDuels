@@ -10,6 +10,7 @@ const { generateTokenPair } = require('../utils/token');
 const config = require('../config/env');
 const { createError } = require('../middlewares/error.middleware');
 const emailService = require('./email.service');
+const googleAuthService = require('./googleAuth.service');
 
 /**
  * Register a new user
@@ -103,6 +104,7 @@ async function login(credentials) {
         id: true,
         username: true,
         email: true,
+        fullName: true, // Include full name
         passwordHash: true,
         avatarUrl: true,
         role: true,
@@ -355,9 +357,44 @@ async function resetPassword(token, newPassword) {
   }
 }
 
+/**
+ * Login with Google
+ */
+async function loginWithGoogle(accessToken) {
+  try {
+    const googleUser = await googleAuthService.getGoogleUserInfo(null, accessToken);
+    const user = await googleAuthService.findOrCreateGoogleUser(googleUser);
+
+    const tokens = generateTokenPair({ 
+      userId: user.id, 
+      email: user.email,
+      username: user.username,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
+      rating: user.rating,
+      role: user.role
+    });
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: tokens.refreshToken,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return { user, tokens };
+  } catch (error) {
+    console.error('Google login error:', error);
+    if (error.isOperational) throw error;
+    throw createError.internal('Google login failed');
+  }
+}
+
 module.exports = {
   register,
   login,
+  loginWithGoogle,
   refreshTokens,
   logout,
   createSession,

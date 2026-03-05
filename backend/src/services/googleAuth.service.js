@@ -79,10 +79,10 @@ async function getGoogleTokens(code) {
 async function getGoogleUserInfo(id_token, access_token) {
   try {
     const response = await axios.get(
-      `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${access_token}`,
+       `https://www.googleapis.com/oauth2/v1/userinfo?alt=json`,
       {
         headers: {
-          Authorization: `Bearer ${id_token}`,
+          Authorization: `Bearer ${access_token}`,
         },
       }
     );

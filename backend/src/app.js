@@ -28,10 +28,8 @@ const leaderboardRoutes = require('./routes/leaderboard.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const adminRoutes = require('./routes/admin.routes');
 const recommendationRoutes = require('./routes/recommendation.routes');
-const analyticsRoutes = require('./routes/analytics.routes');
 const spectatorRoutes = require('./routes/spectator.routes');
 const gdprRoutes = require('./routes/gdpr.routes');
-const pushNotificationRoutes = require('./routes/push-notification.routes');
 const duelRoutes = require('./routes/duel.routes');
 const feedRoutes = require('./routes/feed.routes');
 const reportRoutes = require('./routes/report.routes');
@@ -132,16 +130,12 @@ function createApp() {
   const path = require('path');
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-  // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.json({
-      success: true,
-      message: 'LearnDuels API is healthy',
-      timestamp: new Date().toISOString(),
-      environment: config.NODE_ENV,
-      version: process.env.npm_package_version || '1.0.0',
-    });
-  });
+  // Serve uploaded files statically
+  const path = require('path');
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+  // API Routes
+  app.use('/health', require('./routes/health.routes'));
 
   // Root endpoint (Welcome message)
   app.get('/', (req, res) => {
@@ -156,7 +150,10 @@ function createApp() {
   });
 
   // Temporary route for token generation
-  app.get('/api/test/token', (req, res) => {
+  app.get('/api/test/token', (req, res, next) => {
+    if (process.env.NODE_ENV !== 'development' && app.get('env') !== 'development') {
+      return res.status(404).json({ success: false, message: 'Not Found' });
+    }
     const { generateAccessToken } = require('./utils/token');
     const id = parseInt(req.query.id) || 1;
     // Standard test users
@@ -183,7 +180,6 @@ function createApp() {
         notifications: '/api/notifications',
         admin: '/api/admin',
         recommendations: '/api/recommendations',
-        analytics: '/api/analytics',
         spectate: '/api/spectate',
         gdpr: '/api/gdpr',
         saved: '/api/saved',
@@ -208,7 +204,6 @@ function createApp() {
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/recommendations', recommendationRoutes);
-  app.use('/api/analytics', analyticsRoutes);
   app.use('/api/spectate', spectatorRoutes);
   app.use('/api/gdpr', gdprRoutes);
   app.use('/api/duels', duelRoutes);
@@ -217,18 +212,6 @@ function createApp() {
   app.use('/api/chat', chatRoutes);
   app.use('/api/saved', savedRoutes);
   // Push notifications merged into notifications route
-  app.use('/api/notifications', pushNotificationRoutes);
-
-  // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.status(200).json({
-      success: true,
-      message: 'LearnDuels API is healthy',
-      timestamp: new Date().toISOString(),
-      environment: config.NODE_ENV,
-      version: '1.0.0'
-    });
-  });
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);

@@ -134,7 +134,7 @@ class _SpectatorScreenState extends ConsumerState<SpectatorScreen> {
                   ),
                   // Highlight if any player is on this question
                   tileColor: _isPlayerOnQuestion(progress, index)
-                      ? Colors.blue.withOpacity(0.1)
+                      ? Colors.blue.withValues(alpha: 0.1)
                       : null,
                 );
               },

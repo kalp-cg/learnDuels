@@ -11,10 +11,30 @@ const { asyncHandler } = require('../middlewares/error.middleware');
 
 const router = express.Router();
 
-// Import notification service
+// Import services
 const notificationService = require('../services/notification.service');
+const pushNotificationService = require('../services/push-notification.service');
 
 const notificationController = {
+  // Register device for push notifications
+  registerDevice: asyncHandler(async (req, res) => {
+    const { token, platform } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Device token is required' });
+    }
+    
+    await pushNotificationService.registerDeviceToken(
+      req.userId,
+      token,
+      platform || 'web'
+    );
+    
+    res.json({
+      success: true,
+      message: 'Device registered for push notifications'
+    });
+  }),
+
   getUserNotifications: asyncHandler(async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
     const result = await notificationService.getUserNotifications(req.userId, {
@@ -95,6 +115,13 @@ router.delete(
   ],
   handleValidationErrors,
   notificationController.deleteNotification
+);
+
+// POST /api/notifications/register-device - Register device token
+router.post(
+  '/register-device',
+  authenticateToken,
+  notificationController.registerDevice
 );
 
 module.exports = router;

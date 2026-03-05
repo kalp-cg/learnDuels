@@ -6,8 +6,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 class GoogleAuthService {
   final Dio _dio;
 
-  // Configure Google Sign-In
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+  // Configure Google Sign-In with clientId required for mobile OAuth flow
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+    clientId: const String.fromEnvironment(
+      'GOOGLE_CLIENT_ID',
+      defaultValue:
+          '171390706156-v9947fn6ttjjq82gqf515ec2cele988d.apps.googleusercontent.com',
+    ),
+  );
 
   GoogleAuthService(this._dio);
 
@@ -15,6 +22,12 @@ class GoogleAuthService {
   Future<String?> signInWithGoogle() async {
     try {
       debugPrint('🔵 Starting Google Sign-In...');
+
+      // Check if running on web
+      if (kIsWeb) {
+        debugPrint('❌ Google Sign-In is not supported on web platform');
+        return 'Google Sign-In is only available on mobile devices';
+      }
 
       // Trigger Google Sign-In flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();

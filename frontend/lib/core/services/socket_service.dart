@@ -58,8 +58,9 @@ class SocketService {
   }
 
   Future<void> connectDuel() async {
-    if ((_duelSocket != null && _duelSocket!.connected) || _isDuelConnecting)
+    if ((_duelSocket != null && _duelSocket!.connected) || _isDuelConnecting) {
       return;
+    }
 
     _isDuelConnecting = true;
     try {

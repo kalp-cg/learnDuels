@@ -75,7 +75,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         maxHeight: 512,
         imageQuality: 80,
       );
-      
+
       if (image != null) {
         // For web, read bytes directly since File doesn't work
         if (kIsWeb) {
@@ -95,9 +95,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
       }
     }
   }
@@ -165,14 +165,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     try {
       String? avatarUrl = _avatarUrlController.text.trim();
-      
+
       // If user picked a local image, upload it first
       if (_selectedImageBytes != null) {
-        final uploadedUrl = await ref.read(userServiceProvider).uploadAvatar(
-          _selectedImageBytes!,
-          'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
-        
+        final uploadedUrl = await ref
+            .read(userServiceProvider)
+            .uploadAvatar(
+              _selectedImageBytes!,
+              'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            );
+
         if (uploadedUrl != null) {
           avatarUrl = uploadedUrl;
           _avatarUrlController.text = uploadedUrl;
@@ -186,7 +188,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           return;
         }
       }
-      
+
       final success = await ref.read(userServiceProvider).updateProfile({
         'fullName': _fullNameController.text.trim(),
         'bio': _bioController.text.trim(),
@@ -196,13 +198,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (success) {
         if (mounted) {
           ref.invalidate(userProfileProvider);
-          
+
           // Sync avatar with socket server for real-time updates
-          ref.read(socketServiceProvider).updateUserProfile(
-            avatarUrl: avatarUrl,
-            fullName: _fullNameController.text.trim(),
-          );
-          
+          ref
+              .read(socketServiceProvider)
+              .updateUserProfile(
+                avatarUrl: avatarUrl,
+                fullName: _fullNameController.text.trim(),
+              );
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile updated successfully')),
           );
@@ -300,34 +304,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                   height: 120,
                                 )
                               : _selectedImage != null
-                                  // Mobile: use Image.file
-                                  ? Image.file(
-                                      _selectedImage!,
-                                      fit: BoxFit.cover,
-                                      width: 120,
-                                      height: 120,
-                                    )
-                                  : _avatarUrlController.text.isNotEmpty
-                                      ? Image.network(
-                                          _avatarUrlController.text,
-                                          fit: BoxFit.cover,
-                                          width: 120,
-                                          height: 120,
-                                          errorBuilder: (_, __, ___) => Container(
-                                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                            child: Icon(
-                                              Icons.person,
-                                              size: 60,
-                                              color: Theme.of(context).colorScheme.primary,
-                                            ),
-                                          ),
-                                        )
-                                      : Image.network(
-                                          _getAvatarUrl('Felix'),
-                                          fit: BoxFit.cover,
-                                          width: 120,
-                                          height: 120,
-                                        ),
+                              // Mobile: use Image.file
+                              ? Image.file(
+                                  _selectedImage!,
+                                  fit: BoxFit.cover,
+                                  width: 120,
+                                  height: 120,
+                                )
+                              : _avatarUrlController.text.isNotEmpty
+                              ? Image.network(
+                                  _avatarUrlController.text,
+                                  fit: BoxFit.cover,
+                                  width: 120,
+                                  height: 120,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.1),
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                  ),
+                                )
+                              : Image.network(
+                                  _getAvatarUrl('Felix'),
+                                  fit: BoxFit.cover,
+                                  width: 120,
+                                  height: 120,
+                                ),
                         ),
                       ),
                       Positioned(

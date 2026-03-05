@@ -64,18 +64,18 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               onPressed: () async {
                 await ref.read(notificationServiceProvider).markAllAsRead();
                 ref.invalidate(notificationsProvider);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('All notifications marked as read'),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('All notifications marked as read'),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  );
-                }
+                  ),
+                );
               },
               icon: const Icon(Icons.done_all_rounded, size: 18),
               label: Text(

@@ -539,18 +539,18 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
               final success = await ref
                   .read(friendServiceProvider)
                   .followUser(sender['senderId']);
-              if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success
-                          ? 'Followed successfully!'
-                          : 'Failed to follow (or already following)',
-                    ),
+              if (!context.mounted) return;
+
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    success
+                        ? 'Followed successfully!'
+                        : 'Failed to follow (or already following)',
                   ),
-                );
-              }
+                ),
+              );
             },
             child: const Text('Follow'),
           ),
@@ -774,6 +774,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                           onTapLink: (text, href, title) async {
                             if (href != null) {
                               if (!await launchUrl(Uri.parse(href))) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Could not launch URL'),

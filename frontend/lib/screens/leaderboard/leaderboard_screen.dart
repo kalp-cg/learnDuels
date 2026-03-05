@@ -24,7 +24,8 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
   ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with AutomaticKeepAliveClientMixin {
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
+    with AutomaticKeepAliveClientMixin {
   Timer? _refreshTimer;
 
   @override
@@ -72,7 +73,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Auto
               userRankAsync.when(
                 data: (rankData) => _buildYourRankCard(rankData),
                 loading: () => const SizedBox(),
-                error: (_, __) => const SizedBox(),
+                error: (_, _) => const SizedBox(),
               ),
               const SizedBox(height: 32),
               leaderboardAsync.when(

@@ -114,6 +114,7 @@ class _CreateChallengeScreenState extends ConsumerState<CreateChallengeScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 16),
+                  // ignore: deprecated_member_use
                   RadioListTile<String>(
                     title: const Text('Async (Take turns)'),
                     subtitle: const Text(
@@ -128,6 +129,7 @@ class _CreateChallengeScreenState extends ConsumerState<CreateChallengeScreen> {
                       }
                     },
                   ),
+                  // ignore: deprecated_member_use
                   RadioListTile<String>(
                     title: const Text('Instant (Real-time)'),
                     subtitle: const Text('Compete live at the same time'),

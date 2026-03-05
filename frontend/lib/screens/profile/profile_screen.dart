@@ -365,7 +365,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     fit: BoxFit.cover,
                     width: 100,
                     height: 100,
-                    errorBuilder: (_, __, ___) => Center(
+                    errorBuilder: (_, _, _) => Center(
                       child: Text(
                         username.isNotEmpty ? username[0].toUpperCase() : '?',
                         style: TextStyle(

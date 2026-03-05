@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const adminService = require('../services/admin.service');
+const analyticsService = require('../services/analytics.service');
 const { authenticate } = require('../middlewares/auth.middleware');
+const { successResponse, errorResponse } = require('../utils/response');
 
 /**
  * Admin Routes - Moderation and content management
@@ -19,8 +21,134 @@ const requireAdmin = (req, res, next) => {
 // Get dashboard statistics
 router.get('/dashboard', authenticate, requireAdmin, async (req, res, next) => {
   try {
-    const stats = await adminService.getDashboardStats();
+    // Combine stats from admin service and analytics service
+    const adminStats = await adminService.getDashboardStats();
+    try {
+      // Try to fetch analytics stats if available
+      const analyticsStats = await analyticsService.getDashboardStats();
+      res.json({ success: true, data: { ...adminStats, ...analyticsStats } });
+    } catch (e) {
+      // Fallback if analytics fails
+      console.warn('Analytics service failed, returning basic stats', e);
+      res.json({ success: true, data: adminStats });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/admin/analytics/dau
+ * @desc    Get Daily Active Users
+ * @access  Private (Admin)
+ */
+router.get('/analytics/dau', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    const startDate = req.query.startDate 
+      ? new Date(req.query.startDate) 
+      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000); // Default 30 days
+
+    const dau = await analyticsService.getDailyActiveUsers(startDate, endDate);
+    if (!dau) {
+        return res.json({ success: true, data: [] });
+    }
+    res.json({ success: true, data: dau });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/admin/analytics/challenges
+ * @desc    Get challenge statistics
+ * @access  Private (Admin)
+ */
+router.get('/analytics/challenges', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    const startDate = req.query.startDate 
+      ? new Date(req.query.startDate)
+      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const stats = await analyticsService.getChallengeAcceptanceRate(startDate, endDate);
     res.json({ success: true, data: stats });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/admin/analytics/quizzes
+ * @desc    Get quiz completion statistics
+ * @access  Private (Admin)
+ */
+router.get('/analytics/quizzes', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    const startDate = req.query.startDate 
+      ? new Date(req.query.startDate)
+      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const stats = await analyticsService.getQuizCompletionRate(startDate, endDate);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/admin/analytics/engagement
+ * @desc    Get user engagement metrics
+ * @access  Private (Admin)
+ */
+router.get('/analytics/engagement', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    const startDate = req.query.startDate 
+      ? new Date(req.query.startDate)
+      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const stats = await analyticsService.getUserEngagement(startDate, endDate);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/admin/analytics/topics/popular
+ * @desc    Get popular topics
+ * @access  Private
+ */
+router.get('/analytics/topics/popular', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    const startDate = req.query.startDate 
+      ? new Date(req.query.startDate)
+      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const limit = parseInt(req.query.limit) || 10;
+
+    const topics = await analyticsService.getTopicPopularity(startDate, endDate, limit);
+    res.json({ success: true, data: topics });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/admin/analytics/retention
+ * @desc    Get user retention data
+ * @access  Private (Admin)
+ */
+router.get('/analytics/retention', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const cohortDate = req.query.cohortDate 
+      ? new Date(req.query.cohortDate)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const retention = await analyticsService.getUserRetention(cohortDate);
+    res.json({ success: true, data: retention });
   } catch (error) {
     next(error);
   }

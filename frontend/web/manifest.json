@@ -1,6 +1,6 @@
 {
-    "name": "frontend_new",
-    "short_name": "frontend_new",
+    "name": "LearnDuels",
+    "short_name": "LearnDuels",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

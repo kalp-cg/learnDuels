@@ -428,7 +428,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                     Switch(
                       value: _isAsync,
                       onChanged: (value) => setState(() => _isAsync = value),
-                      activeColor: AppTheme.secondary,
+                      activeTrackColor: AppTheme.secondary,
                     ),
                   ],
                 ),

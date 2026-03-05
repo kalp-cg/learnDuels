@@ -14,18 +14,15 @@ final duelStateProvider =
     StateNotifierProvider<DuelNotifier, AsyncValue<Map<String, dynamic>?>>((
       ref,
     ) {
-      final duelService = ref.watch(duelServiceProvider);
       final socketService = ref.watch(socketServiceProvider);
-      return DuelNotifier(duelService, socketService, ref);
+      return DuelNotifier(socketService, ref);
     });
 
 class DuelNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
-  final DuelService _duelService;
   final SocketService _socketService;
   final Ref _ref;
 
-  DuelNotifier(this._duelService, this._socketService, this._ref)
-    : super(AsyncValue.data(null)) {
+  DuelNotifier(this._socketService, this._ref) : super(AsyncValue.data(null)) {
     _setupSocketListeners();
   }
 

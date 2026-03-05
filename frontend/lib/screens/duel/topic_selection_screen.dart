@@ -89,7 +89,7 @@ class _TopicSelectionScreenState extends ConsumerState<TopicSelectionScreen> {
                         data: (difficulties) =>
                             _buildDifficultySelector(difficulties),
                         loading: () => _buildLoadingSkeleton(height: 50),
-                        error: (_, __) => const SizedBox.shrink(),
+                        error: (_, _) => const SizedBox.shrink(),
                       ),
 
                       const SizedBox(height: 32),
