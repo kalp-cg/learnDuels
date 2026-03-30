@@ -43,6 +43,29 @@ const savedRoutes = require('./routes/saved.routes');
 function createApp() {
   const app = express();
 
+  const allowedOrigins = (config.CORS_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const allowAllOrigins = allowedOrigins.includes('*');
+  const isDevelopment = config.NODE_ENV === 'development';
+  const allowTestTokenEndpoint =
+    process.env.ENABLE_TEST_TOKEN_ENDPOINT === 'true' &&
+    config.NODE_ENV === 'development';
+
+  const isLocalDevOrigin = (origin) => {
+    if (!isDevelopment || !origin) {
+      return false;
+    }
+
+    try {
+      const { hostname } = new URL(origin);
+      return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    } catch {
+      return false;
+    }
+  };
+
   // Trust proxy for rate limiting and IP detection
   app.set('trust proxy', 1);
 
@@ -81,18 +104,32 @@ function createApp() {
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      // Allow any origin
-      return callback(null, true);
+
+      // Wildcard mode is allowed only without credentials.
+      if (allowAllOrigins) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow dynamic localhost ports for Flutter web and local tooling in development.
+      if (isLocalDevOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
     },
-    credentials: true,
+    credentials: !allowAllOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   }));
 
   // Strict Rate Limiting for Auth Routes
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Increased for demo
+    windowMs: config.RATE_LIMIT_WINDOW,
+    max: Math.max(20, Math.min(config.RATE_LIMIT_MAX, 100)),
     message: {
       success: false,
       message: 'Too many login attempts, please try again later.',
@@ -104,8 +141,8 @@ function createApp() {
 
   // Rate limiting - OPTIMIZED for 500-700 users
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Increased to 1000 requests per 15 minutes per IP
+    windowMs: config.RATE_LIMIT_WINDOW,
+    max: config.RATE_LIMIT_MAX,
     message: {
       success: false,
       message: 'Too many requests from this IP, please try again later.',
@@ -130,10 +167,6 @@ function createApp() {
   const path = require('path');
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-  // Serve uploaded files statically
-  const path = require('path');
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
   // API Routes
   app.use('/health', require('./routes/health.routes'));
 
@@ -151,7 +184,7 @@ function createApp() {
 
   // Temporary route for token generation
   app.get('/api/test/token', (req, res, next) => {
-    if (process.env.NODE_ENV !== 'development' && app.get('env') !== 'development') {
+    if (!allowTestTokenEndpoint) {
       return res.status(404).json({ success: false, message: 'Not Found' });
     }
     const { generateAccessToken } = require('./utils/token');
