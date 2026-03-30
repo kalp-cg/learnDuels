@@ -325,6 +325,8 @@ async function initPushNotifications() {
   }
 }
 
-initPushNotifications();
+if (process.env.NODE_ENV !== 'test') {
+  initPushNotifications();
+}
 
 module.exports = new PushNotificationService();
