@@ -61,7 +61,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
           SnackBar(
             content: Text(
               'Please select all dropdown fields',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+              style: GoogleFonts.firaCode(fontWeight: FontWeight.w500),
             ),
             backgroundColor: AppTheme.error,
           ),
@@ -110,7 +110,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                 const SizedBox(height: 20),
                 Text(
                   'Question Added!',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -120,7 +120,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                 Text(
                   'Your question has been added to our knowledge base. It will appear in duels and practice mode!',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 14,
                     color: AppTheme.textSecondary,
                   ),
@@ -128,7 +128,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '+10 Reputation earned!',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.tertiary,
@@ -162,7 +162,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                         ),
                         child: Text(
                           'Add Another',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             color: AppTheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -193,7 +193,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                               child: Center(
                                 child: Text(
                                   'Go Home',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.firaCode(
                                     color: AppTheme.background,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -216,7 +216,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
           SnackBar(
             content: Text(
               'Failed: $error',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+              style: GoogleFonts.firaCode(fontWeight: FontWeight.w500),
             ),
             backgroundColor: AppTheme.error,
           ),
@@ -246,7 +246,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         ),
         title: Text(
           'Contribute Question',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             color: AppTheme.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -283,7 +283,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                       const SizedBox(height: 12),
                       Text(
                         'Help grow the knowledge base!',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.firaCode(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textPrimary,
@@ -293,7 +293,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'Add a new question to challenge other players',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.firaCode(
                           fontSize: 14,
                           color: AppTheme.textSecondary,
                         ),
@@ -331,7 +331,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                         value: t['id'],
                         child: Text(
                           t['name'],
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             color: AppTheme.textPrimary,
                           ),
                         ),
@@ -376,7 +376,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                             const SizedBox(width: 10),
                             Text(
                               d['name'],
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.firaCode(
                                 color: AppTheme.textPrimary,
                               ),
                             ),
@@ -438,7 +438,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                           value: o,
                           child: Text(
                             'Option $o',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.firaCode(
                               color: AppTheme.textPrimary,
                             ),
                           ),
@@ -492,7 +492,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
                                     const SizedBox(width: 10),
                                     Text(
                                       'Submit Question',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.firaCode(
                                         fontSize: 17,
                                         fontWeight: FontWeight.w700,
                                         color: AppTheme.background,
@@ -517,7 +517,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
   Widget _buildDropdownLabel(String label) {
     return Text(
       label,
-      style: GoogleFonts.outfit(
+      style: GoogleFonts.firaCode(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: AppTheme.textPrimary,
@@ -539,7 +539,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         const SizedBox(width: 10),
         Text(
           title,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: AppTheme.textPrimary,
@@ -563,7 +563,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
       ),
       child: DropdownButtonFormField<T>(
         initialValue: value,
-        hint: Text(hint, style: GoogleFonts.outfit(color: AppTheme.textMuted)),
+        hint: Text(hint, style: GoogleFonts.firaCode(color: AppTheme.textMuted)),
         items: items,
         onChanged: onChanged,
         dropdownColor: AppTheme.surfaceLight,
@@ -575,7 +575,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 15),
+        style: GoogleFonts.firaCode(color: AppTheme.textPrimary, fontSize: 15),
       ),
     );
   }
@@ -610,7 +610,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
         border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
       ),
       child: Center(
-        child: Text(text, style: GoogleFonts.outfit(color: AppTheme.error)),
+        child: Text(text, style: GoogleFonts.firaCode(color: AppTheme.error)),
       ),
     );
   }
