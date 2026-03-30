@@ -103,7 +103,7 @@ class _PendingChallengesScreenState
           SnackBar(
             content: Text(
               'Challenge accepted! Starting quiz...',
-              style: GoogleFonts.outfit(),
+              style: GoogleFonts.firaCode(),
             ),
             backgroundColor: AppTheme.success,
           ),
@@ -119,7 +119,7 @@ class _PendingChallengesScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to accept: $e', style: GoogleFonts.outfit()),
+            content: Text('Failed to accept: $e', style: GoogleFonts.firaCode()),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -143,7 +143,7 @@ class _PendingChallengesScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Challenge declined', style: GoogleFonts.outfit()),
+            content: Text('Challenge declined', style: GoogleFonts.firaCode()),
             backgroundColor: AppTheme.surfaceLight,
           ),
         );
@@ -171,7 +171,7 @@ class _PendingChallengesScreenState
         ),
         title: Text(
           'Challenges',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             color: AppTheme.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -184,7 +184,7 @@ class _PendingChallengesScreenState
           indicatorWeight: 3,
           labelColor: AppTheme.primary,
           unselectedLabelColor: AppTheme.textMuted,
-          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          labelStyle: GoogleFonts.firaCode(fontWeight: FontWeight.w600),
           tabs: const [
             Tab(text: 'Received'),
             Tab(text: 'Sent'),
@@ -209,7 +209,7 @@ class _PendingChallengesScreenState
           error: (e, s) => Center(
             child: Text(
               'Error loading challenges',
-              style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+              style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
             ),
           ),
         ),
@@ -233,7 +233,7 @@ class _PendingChallengesScreenState
           icon: const Icon(Icons.add_rounded, color: Colors.white),
           label: Text(
             'New Challenge',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.firaCode(
               color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
@@ -269,7 +269,7 @@ class _PendingChallengesScreenState
               const SizedBox(height: 20),
               Text(
                 isReceived ? 'No Challenges Received' : 'No Challenges Sent',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.firaCode(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textPrimary,
@@ -281,7 +281,7 @@ class _PendingChallengesScreenState
                     ? 'When friends challenge you, they\'ll appear here'
                     : 'Challenge your friends to a quiz duel!',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.firaCode(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
                 ),
@@ -351,7 +351,7 @@ class _PendingChallengesScreenState
                 child: Center(
                   child: Text(
                     challengerName[0].toUpperCase(),
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.firaCode(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                       fontSize: 20,
@@ -366,14 +366,14 @@ class _PendingChallengesScreenState
                   children: [
                     Text(
                       isReceived ? 'Challenge from' : 'Challenge to',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.firaCode(
                         fontSize: 12,
                         color: AppTheme.textMuted,
                       ),
                     ),
                     Text(
                       challengerName,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.firaCode(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.textPrimary,
@@ -393,7 +393,7 @@ class _PendingChallengesScreenState
                 ),
                 child: Text(
                   difficulty.toString().toUpperCase(),
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: diffColor,
@@ -431,7 +431,7 @@ class _PendingChallengesScreenState
                     ),
                     child: Text(
                       'Decline',
-                      style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+                      style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
                     ),
                   ),
                 ),
@@ -452,7 +452,7 @@ class _PendingChallengesScreenState
                           child: Center(
                             child: Text(
                               'Accept & Play',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.firaCode(
                                 color: Colors.black87,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -473,7 +473,7 @@ class _PendingChallengesScreenState
                 const SizedBox(width: 6),
                 Text(
                   'Waiting for response...',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 13,
                     color: AppTheme.tertiary,
                   ),
@@ -500,7 +500,7 @@ class _PendingChallengesScreenState
           const SizedBox(width: 6),
           Text(
             text,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.firaCode(
               fontSize: 12,
               color: AppTheme.textSecondary,
             ),
