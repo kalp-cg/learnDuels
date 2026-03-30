@@ -8,6 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/services/friend_service.dart';
+import '../../core/theme.dart';
 import '../../providers/user_provider.dart';
 
 class GeneralChatScreen extends ConsumerStatefulWidget {
@@ -738,7 +739,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: isMe ? Colors.white70 : Colors.black87,
+                                  color: isMe
+                                      ? Colors.white70
+                                      : AppTheme.textSecondary,
                                 ),
                               ),
                             ],
