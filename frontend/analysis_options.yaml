@@ -10,6 +10,9 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  exclude:
+    - lib/**/*_old.dart
+    - lib/**/*backup*.dart
   errors:
     deprecated_member_use: ignore
 
