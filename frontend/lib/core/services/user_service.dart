@@ -16,27 +16,36 @@ class UserService {
   UserService(this._dio);
 
   Future<Map<String, dynamic>?> getProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken');
+
+    if (token == null) {
+      debugPrint('❌ No access token found in getProfile');
+      throw Exception('Not logged in. Please sign in again.');
+    }
+
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken');
-
-      if (token == null) {
-        debugPrint('❌ No access token found in getProfile');
-        return null;
-      }
-
       final response = await _dio.get(
         ApiConstants.me,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success']) {
-        return response.data['data'];
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(response.data['message'] ?? 'Failed to load profile');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        // Token expired or invalid — clear it so user is prompted to re-login
+        await prefs.remove('accessToken');
+        await prefs.remove('refreshToken');
+        throw Exception('Session expired. Please log in again.');
+      }
+      debugPrint('Error getting profile: ${e.message}');
+      throw Exception('Network error. Check your connection.');
     } catch (e) {
       debugPrint('Error getting profile: $e');
-      return null;
+      rethrow;
     }
   }
 
