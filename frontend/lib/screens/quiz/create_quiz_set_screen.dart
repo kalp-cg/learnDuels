@@ -61,7 +61,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
         SnackBar(
           content: Text(
             'Please enter a name for the quiz',
-            style: GoogleFonts.outfit(),
+            style: GoogleFonts.firaCode(),
           ),
           backgroundColor: AppTheme.error,
         ),
@@ -74,7 +74,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
         SnackBar(
           content: Text(
             'Please select at least one question',
-            style: GoogleFonts.outfit(),
+            style: GoogleFonts.firaCode(),
           ),
           backgroundColor: AppTheme.error,
         ),
@@ -127,7 +127,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                 const SizedBox(height: 20),
                 Text(
                   'Quiz Created!',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -137,7 +137,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                 Text(
                   'Your quiz set "${_nameController.text}" with ${_selectedQuestionIds.length} questions has been created successfully.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 14,
                     color: AppTheme.textSecondary,
                   ),
@@ -159,7 +159,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                     ),
                     child: Text(
                       'Done',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      style: GoogleFonts.firaCode(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -174,7 +174,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
           SnackBar(
             content: Text(
               'Failed to create quiz: $e',
-              style: GoogleFonts.outfit(),
+              style: GoogleFonts.firaCode(),
             ),
             backgroundColor: AppTheme.error,
           ),
@@ -203,7 +203,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
         ),
         title: Text(
           'Create Quiz Set',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             color: AppTheme.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -224,12 +224,12 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                   // Name field
                   TextField(
                     controller: _nameController,
-                    style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                    style: GoogleFonts.firaCode(color: AppTheme.textPrimary),
                     decoration: InputDecoration(
                       labelText: 'Quiz Name',
-                      labelStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
+                      labelStyle: GoogleFonts.firaCode(color: AppTheme.textMuted),
                       hintText: 'e.g., Science Basics Quiz',
-                      hintStyle: GoogleFonts.outfit(
+                      hintStyle: GoogleFonts.firaCode(
                         color: AppTheme.textMuted.withValues(alpha: 0.5),
                       ),
                       filled: true,
@@ -249,13 +249,13 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                   // Description field
                   TextField(
                     controller: _descController,
-                    style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                    style: GoogleFonts.firaCode(color: AppTheme.textPrimary),
                     maxLines: 2,
                     decoration: InputDecoration(
                       labelText: 'Description (optional)',
-                      labelStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
+                      labelStyle: GoogleFonts.firaCode(color: AppTheme.textMuted),
                       hintText: 'A short description of this quiz...',
-                      hintStyle: GoogleFonts.outfit(
+                      hintStyle: GoogleFonts.firaCode(
                         color: AppTheme.textMuted.withValues(alpha: 0.5),
                       ),
                       filled: true,
@@ -294,7 +294,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                             const SizedBox(width: 12),
                             Text(
                               _isPublic ? 'Public Quiz' : 'Private Quiz',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.firaCode(
                                 color: AppTheme.textPrimary,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -317,7 +317,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                     children: [
                       Text(
                         'Select Questions',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.firaCode(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textPrimary,
@@ -336,7 +336,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                         ),
                         child: Text(
                           '${_selectedQuestionIds.length} selected',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: _selectedQuestionIds.isNotEmpty
@@ -359,7 +359,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                     return Center(
                       child: Text(
                         'No questions available',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.firaCode(
                           color: AppTheme.textSecondary,
                         ),
                       ),
@@ -417,7 +417,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                                   q['content'] ??
                                       q['questionText'] ??
                                       'Question',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.firaCode(
                                     fontSize: 14,
                                     color: AppTheme.textPrimary,
                                   ),
@@ -436,7 +436,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                                 ),
                                 child: Text(
                                   q['difficulty'] ?? 'medium',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.firaCode(
                                     fontSize: 10,
                                     color: AppTheme.textMuted,
                                   ),
@@ -455,7 +455,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                 error: (e, s) => Center(
                   child: Text(
                     'Error loading questions',
-                    style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+                    style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
                   ),
                 ),
               ),
@@ -510,7 +510,7 @@ class _CreateQuizSetScreenState extends ConsumerState<CreateQuizSetScreen> {
                                   const SizedBox(width: 10),
                                   Text(
                                     'Create Quiz Set',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.firaCode(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
                                       color: _selectedQuestionIds.isNotEmpty
