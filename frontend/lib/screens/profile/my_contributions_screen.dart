@@ -70,7 +70,7 @@ class MyContributionsScreen extends ConsumerWidget {
         ),
         title: Text(
           'My Contributions',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             color: AppTheme.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -115,7 +115,7 @@ class MyContributionsScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 Text(
                   'Error loading contributions',
-                  style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+                  style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
                 ),
               ],
             ),
@@ -141,7 +141,7 @@ class MyContributionsScreen extends ConsumerWidget {
           icon: const Icon(Icons.add_rounded, color: AppTheme.background),
           label: Text(
             'Add Question',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.firaCode(
               color: AppTheme.background,
               fontWeight: FontWeight.w600,
             ),
@@ -181,7 +181,7 @@ class MyContributionsScreen extends ConsumerWidget {
               children: [
                 Text(
                   '$count Questions',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -190,7 +190,7 @@ class MyContributionsScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Contributed to the community',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 14,
                     color: AppTheme.textSecondary,
                   ),
@@ -225,7 +225,7 @@ class MyContributionsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             Text(
               'No Contributions Yet',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.firaCode(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
@@ -235,7 +235,7 @@ class MyContributionsScreen extends ConsumerWidget {
             Text(
               'Share your knowledge! Add questions to help other players learn and grow.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.firaCode(
                 fontSize: 15,
                 color: AppTheme.textSecondary,
                 height: 1.5,
@@ -274,7 +274,7 @@ class MyContributionsScreen extends ConsumerWidget {
                         const SizedBox(width: 10),
                         Text(
                           'Add Your First Question',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.background,
@@ -352,7 +352,7 @@ class MyContributionsScreen extends ConsumerWidget {
                 ),
                 child: Text(
                   difficulty.toString().toUpperCase(),
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: difficultyColor,
@@ -380,7 +380,7 @@ class MyContributionsScreen extends ConsumerWidget {
                     const SizedBox(width: 4),
                     Text(
                       statusText,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.firaCode(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: statusColor,
@@ -392,7 +392,7 @@ class MyContributionsScreen extends ConsumerWidget {
               const Spacer(),
               Text(
                 '#$index',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.firaCode(
                   fontSize: 12,
                   color: AppTheme.textMuted,
                   fontWeight: FontWeight.w500,
@@ -405,7 +405,7 @@ class MyContributionsScreen extends ConsumerWidget {
           // Question text
           Text(
             content,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.firaCode(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimary,
@@ -448,7 +448,7 @@ class MyContributionsScreen extends ConsumerWidget {
                       child: Center(
                         child: Text(
                           opt['id'] ?? '',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: isCorrect
@@ -462,7 +462,7 @@ class MyContributionsScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         opt['text'] ?? '',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.firaCode(
                           fontSize: 14,
                           color: isCorrect
                               ? AppTheme.success
@@ -489,7 +489,7 @@ class MyContributionsScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(
               'Added on ${_formatDate(createdAt)}',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.firaCode(
                 fontSize: 12,
                 color: AppTheme.textMuted,
               ),
