@@ -1,21 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme.dart';
 import '../../core/services/leaderboard_service.dart';
-import '../profile/profile_screen.dart';
-import 'dart:async';
-
-final globalLeaderboardProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
-      final service = ref.watch(leaderboardServiceProvider);
-      return await service.getGlobalLeaderboard(limit: 100);
-    });
-
-final userRankProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((
-  ref,
-) async {
-  final service = ref.watch(leaderboardServiceProvider);
-  return await service.getUserRanking();
-});
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -24,178 +11,547 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
   ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
-    with AutomaticKeepAliveClientMixin {
-  Timer? _refreshTimer;
-
-  @override
-  bool get wantKeepAlive => true; // Preserve state when switching tabs
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
+  List<Map<String, dynamic>> _entries = [];
+  Map<String, dynamic>? _myRank;
+  bool _isLoading = true;
+  String _activeTab = 'Global XP';
+  final List<String> _tabs = [
+    'Global XP',
+    'DSA',
+    'Web Dev',
+    'Elo Rating',
+    'Streak',
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Reduced from 15s to 90s for better performance
-    _refreshTimer = Timer.periodic(const Duration(seconds: 90), (_) {
-      if (mounted) {
-        ref.invalidate(globalLeaderboardProvider);
-        ref.invalidate(userRankProvider);
-      }
-    });
+    _loadLeaderboard();
   }
 
-  @override
-  void dispose() {
-    _refreshTimer?.cancel();
-    super.dispose();
+  Future<void> _loadLeaderboard() async {
+    setState(() => _isLoading = true);
+    try {
+      final leaderboardService = ref.read(leaderboardServiceProvider);
+      final data = await leaderboardService.getGlobalLeaderboard(
+        period: _activeTab == 'Global XP'
+            ? 'weekly'
+            : _activeTab == 'DSA'
+            ? 'weekly'
+            : _activeTab == 'Web Dev'
+            ? 'weekly'
+            : _activeTab == 'Elo Rating'
+            ? 'weekly'
+            : 'weekly',
+      );
+      final myRankData = await leaderboardService.getUserRanking();
+      if (mounted) {
+        setState(() {
+          _entries = List<Map<String, dynamic>>.from(data?['data'] ?? []);
+          _myRank = myRankData;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
-    final leaderboardAsync = ref.watch(globalLeaderboardProvider);
-    final userRankAsync = ref.watch(userRankProvider);
-
     return Scaffold(
+      backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(globalLeaderboardProvider);
-            ref.invalidate(userRankProvider);
-          },
-          color: Theme.of(context).colorScheme.primary,
-          child: ListView(
-            physics: const BouncingScrollPhysics(),
-            cacheExtent: 300,
-            padding: const EdgeInsets.all(24),
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 32),
-              userRankAsync.when(
-                data: (rankData) => _buildYourRankCard(rankData),
-                loading: () => const SizedBox(),
-                error: (_, _) => const SizedBox(),
-              ),
-              const SizedBox(height: 32),
-              leaderboardAsync.when(
-                data: (result) {
-                  final players = result?['data'] as List<dynamic>? ?? [];
-                  if (players.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No rankings yet',
-                        style: Theme.of(context).textTheme.bodyMedium,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'LEADERBOARD',
+                        style: GoogleFonts.firaCode(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                          letterSpacing: 1.0,
+                        ),
                       ),
-                    );
-                  }
-                  return Column(
-                    children: players
-                        .map((p) => _buildPlayerCard(p, players.indexOf(p) + 1))
-                        .toList(),
-                  );
-                },
-                loading: () => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Global Rankings • Updated 5m ago',
+                        style: AppTheme.body(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    onPressed: _loadLeaderboard,
+                    icon: const Icon(
+                      Icons.tune_rounded,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Tab bar
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: _tabs.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final tab = _tabs[index];
+                  final isActive = tab == _activeTab;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _activeTab = tab);
+                      _loadLeaderboard();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? AppTheme.textPrimary
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isActive
+                              ? AppTheme.textPrimary
+                              : AppTheme.border,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          tab,
+                          style: GoogleFonts.firaCode(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: isActive
+                                ? AppTheme.background
+                                : AppTheme.textMuted,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primary),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadLeaderboard,
+                      color: AppTheme.primary,
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        children: [
+                          // Top 3 Podium
+                          if (_entries.length >= 3) _buildPodium(),
+                          const SizedBox(height: 20),
+
+                          // Ranking header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'RANKING',
+                                  style: GoogleFonts.firaCode(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textMuted,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                Text(
+                                  'TOTAL EXPERIENCE',
+                                  style: GoogleFonts.firaCode(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textMuted,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Entries (skip top 3 since they're on podium)
+                          ...(_entries.length > 3
+                                  ? _entries.sublist(3)
+                                  : _entries)
+                              .asMap()
+                              .entries
+                              .map((entry) {
+                                final index = _entries.length > 3
+                                    ? entry.key + 4
+                                    : entry.key + 1;
+                                return _buildRankEntry(entry.value, index);
+                              }),
+                        ],
+                      ),
+                    ),
+            ),
+
+            // My rank pinned at bottom
+            if (_myRank != null) _buildMyRankBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPodium() {
+    if (_entries.length < 3) return const SizedBox();
+    final first = _entries[0];
+    final second = _entries[1];
+    final third = _entries[2];
+
+    return SizedBox(
+      height: 200,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // 2nd place
+          Expanded(child: _buildPodiumCard(second, 2, 150)),
+          const SizedBox(width: 10),
+          // 1st place
+          Expanded(child: _buildPodiumCard(first, 1, 200)),
+          const SizedBox(width: 10),
+          // 3rd place
+          Expanded(child: _buildPodiumCard(third, 3, 130)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPodiumCard(Map<String, dynamic> user, int rank, double height) {
+    final username = user['username'] ?? user['fullName'] ?? 'User';
+    final xp = user['xp'] ?? user['score'] ?? 0;
+    final avatarUrl = user['avatarUrl'];
+    final initials = username.length >= 2
+        ? username.substring(0, 2).toUpperCase()
+        : username.toUpperCase();
+
+    Color rankColor;
+    switch (rank) {
+      case 1:
+        rankColor = AppTheme.primary;
+        break;
+      case 2:
+        rankColor = AppTheme.textSecondary;
+        break;
+      default:
+        rankColor = AppTheme.textMuted;
+        break;
+    }
+
+    return Container(
+      height: height,
+      decoration: AppTheme.terminalCard(
+        borderRadius: 14,
+        borderColor: rank == 1 ? AppTheme.primary.withValues(alpha: 0.3) : null,
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Avatar
+          Stack(
+            alignment: Alignment.topRight,
+            children: [
+              CircleAvatar(
+                radius: rank == 1 ? 32 : 26,
+                backgroundColor: rankColor.withValues(alpha: 0.2),
+                backgroundImage: avatarUrl != null
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: avatarUrl == null
+                    ? Text(
+                        initials,
+                        style: GoogleFonts.firaCode(
+                          fontSize: rank == 1 ? 18 : 14,
+                          fontWeight: FontWeight.w700,
+                          color: rankColor,
+                        ),
+                      )
+                    : null,
+              ),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: rankColor,
+                  shape: BoxShape.circle,
                 ),
-                error: (_, __) => Center(
-                  child: Text(
-                    'Error loading rankings',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                child: Text(
+                  '$rank',
+                  style: GoogleFonts.firaCode(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.background,
                   ),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            username.length > 10 ? '${username.substring(0, 8)}...' : username,
+            style: GoogleFonts.firaCode(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${_formatNumber(xp)} XP',
+            style: GoogleFonts.firaCode(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: rankColor,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Leaderboard',
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Global rankings',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildYourRankCard(Map<String, dynamic>? rankData) {
-    if (rankData == null) return const SizedBox();
-
-    final rank = rankData['rank'] ?? 0;
-    final username = rankData['username'] ?? 'You';
-    final xp = rankData['xp'] ?? 0;
-    final totalUsers = rankData['totalUsers'] ?? 0;
-    final percentile = totalUsers > 0
-        ? ((rank / totalUsers) * 100).toStringAsFixed(1)
-        : '0';
+  Widget _buildRankEntry(Map<String, dynamic> user, int rank) {
+    final username = user['username'] ?? user['fullName'] ?? 'User';
+    final xp = user['xp'] ?? user['score'] ?? 0;
+    final rating = user['rating'] ?? 0;
+    final initials = username.length >= 2
+        ? username.substring(0, 2).toUpperCase()
+        : username.toUpperCase();
+    final isFriend = user['isFriend'] == true;
+    final rankChange = user['rankChange'] ?? 0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
+      margin: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondary,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Text(
-                '#$rank',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSecondary,
-                ),
+          // Rank number
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$rank',
+              style: GoogleFonts.firaCode(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary,
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
+
+          // Avatar
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppTheme.surfaceLight,
+            backgroundImage: user['avatarUrl'] != null
+                ? NetworkImage(user['avatarUrl'])
+                : null,
+            child: user['avatarUrl'] == null
+                ? Text(
+                    initials,
+                    style: GoogleFonts.firaCode(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+
+          // Name + stats
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      username,
+                      style: GoogleFonts.firaCode(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (isFriend) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.secondary.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'FRIEND',
+                          style: GoogleFonts.firaCode(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.secondary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 12,
+                      color: AppTheme.textMuted,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${user['streak'] ?? 0}',
+                      style: GoogleFonts.firaCode(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(
+                      Icons.settings_rounded,
+                      size: 12,
+                      color: AppTheme.textMuted,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '$rating',
+                      style: GoogleFonts.firaCode(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // XP + rank change
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${_formatNumber(xp)} XP',
+                style: GoogleFonts.firaCode(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary,
+                ),
+              ),
+              if (rankChange != 0)
+                Text(
+                  rankChange > 0 ? '+$rankChange' : '$rankChange',
+                  style: GoogleFonts.firaCode(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: rankChange > 0 ? AppTheme.secondary : AppTheme.error,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyRankBar() {
+    final rank = _myRank?['rank'] ?? '--';
+    final username = _myRank?['username'] ?? 'You';
+    final xp = _myRank?['xp'] ?? 0;
+    final initials = username.length >= 2
+        ? username.substring(0, 2).toUpperCase()
+        : 'ME';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: const BoxDecoration(
+        color: AppTheme.surface,
+        border: Border(top: BorderSide(color: AppTheme.border)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '$rank',
+            style: GoogleFonts.firaCode(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
+            child: Text(
+              initials,
+              style: GoogleFonts.firaCode(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.primary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  username,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  'You ($username)',
+                  style: GoogleFonts.firaCode(
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: -0.3,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
                 Text(
-                  'Top $percentile%',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  'Top 5% of all learners',
+                  style: AppTheme.body(fontSize: 11, color: AppTheme.textMuted),
                 ),
               ],
             ),
@@ -204,13 +560,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '$xp',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
+                '${_formatNumber(xp)} XP',
+                style: GoogleFonts.firaCode(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary,
                 ),
               ),
-              Text('XP', style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ],
@@ -218,110 +574,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     );
   }
 
-  Widget _buildPlayerCard(Map<String, dynamic> player, int rank) {
-    final username = player['username'] ?? 'Player';
-    final xp = player['xp'] ?? 0;
-    final level = player['level'] ?? 1;
-    final userId = player['id'];
-
-    return GestureDetector(
-      onTap: () {
-        if (userId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProfileScreen(userId: userId),
-            ),
-          );
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: rank <= 3
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
-                : Theme.of(context).dividerColor,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: rank <= 3
-                    ? Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.15)
-                    : Theme.of(context).dividerColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: Text(
-                  '#$rank',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: rank <= 3
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).textTheme.bodyMedium?.color,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  username[0].toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    username,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    'Level $level',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '$xp XP',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _formatNumber(dynamic num) {
+    if (num == null) return '0';
+    final n = num is int ? num : int.tryParse(num.toString()) ?? 0;
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return n.toString();
   }
 }
