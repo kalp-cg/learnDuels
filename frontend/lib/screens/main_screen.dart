@@ -27,6 +27,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   late Function(dynamic) _notificationHandler;
   late Function(dynamic) _duelAcceptedHandler;
   late Function(dynamic) _challengeStartedHandler;
+  SocketService? _socketService;
 
   @override
   void initState() {
@@ -47,7 +48,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         SnackBar(
           content: Text(
             data['message'] ?? 'New notification',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+            style: GoogleFonts.firaCode(fontWeight: FontWeight.w500),
           ),
           backgroundColor: AppTheme.surfaceLight,
           behavior: SnackBarBehavior.floating,
@@ -95,8 +96,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
 
   void _initSocket() async {
-    final socketService = ref.read(socketServiceProvider);
-    await socketService.connect();
+    _socketService = ref.read(socketServiceProvider);
+    await _socketService?.connect();
 
     // Initialize Push Notifications
     try {
@@ -106,16 +107,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     }
 
     // Listen for invitations
-    socketService.on('duel:invitation_received', _invitationHandler);
+    _socketService?.on('duel:invitation_received', _invitationHandler);
 
     // Listen for generic notifications
-    socketService.on('notification', _notificationHandler);
+    _socketService?.on('notification', _notificationHandler);
 
     // Listen for duel start (after acceptance)
-    socketService.on('duel:accepted', _duelAcceptedHandler);
+    _socketService?.on('duel:accepted', _duelAcceptedHandler);
 
     // Listen for challenge start (instant duel)
-    socketService.on('challenge:started', _challengeStartedHandler);
+    _socketService?.on('challenge:started', _challengeStartedHandler);
   }
 
   void _showInvitationDialog(dynamic data) {
@@ -149,7 +150,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             const SizedBox(width: 12),
             Text(
               'Duel Challenge!',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.firaCode(
                 color: AppTheme.textPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -159,7 +160,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         ),
         content: Text(
           '$challengerName wants to duel you!',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             color: AppTheme.textSecondary,
             fontSize: 15,
           ),
@@ -176,7 +177,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             },
             child: Text(
               'Decline',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.firaCode(
                 color: AppTheme.error,
                 fontWeight: FontWeight.w600,
               ),
@@ -201,7 +202,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               },
               child: Text(
                 'Accept',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.firaCode(
                   color: AppTheme.background,
                   fontWeight: FontWeight.w700,
                 ),
@@ -215,12 +216,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   void dispose() {
-    final socketService = ref.read(socketServiceProvider);
-    socketService.off('duel:invitation_received', _invitationHandler);
-    socketService.off('notification', _notificationHandler);
-    socketService.off('duel:accepted', _duelAcceptedHandler);
-    socketService.off('challenge:started', _challengeStartedHandler);
-    socketService.disconnect();
+    _socketService?.off('duel:invitation_received', _invitationHandler);
+    _socketService?.off('notification', _notificationHandler);
+    _socketService?.off('duel:accepted', _duelAcceptedHandler);
+    _socketService?.off('challenge:started', _challengeStartedHandler);
+    _socketService?.disconnect();
     super.dispose();
   }
 
@@ -242,23 +242,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: AppTheme.border.withValues(alpha: 0.3),
-              width: 1,
-            ),
+          border: const Border(
+            top: BorderSide(color: AppTheme.border, width: 1),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -266,35 +256,35 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   0,
                   Icons.home_outlined,
                   Icons.home_rounded,
-                  'Home',
+                  'HOME',
                   currentIndex,
                 ),
                 _buildNavItem(
                   1,
                   Icons.leaderboard_outlined,
                   Icons.leaderboard_rounded,
-                  'Rank',
+                  'RANK',
                   currentIndex,
                 ),
                 _buildNavItem(
                   2,
                   Icons.chat_bubble_outline_rounded,
                   Icons.chat_bubble_rounded,
-                  'Chat',
+                  'CHAT',
                   currentIndex,
                 ),
                 _buildNavItem(
                   3,
                   Icons.people_outline,
                   Icons.people_rounded,
-                  'Friends',
+                  'NETWORK',
                   currentIndex,
                 ),
                 _buildNavItem(
                   4,
                   Icons.person_outline,
                   Icons.person_rounded,
-                  'Profile',
+                  'PROFILE',
                   currentIndex,
                 ),
               ],
@@ -320,35 +310,25 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16 : 12,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.primary.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               isSelected ? activeIcon : icon,
               color: isSelected ? AppTheme.primary : AppTheme.textMuted,
-              size: 24,
+              size: 22,
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.outfit(
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.firaCode(
+                color: isSelected ? AppTheme.primary : AppTheme.textMuted,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 9,
+                letterSpacing: 0.5,
               ),
-            ],
+            ),
           ],
         ),
       ),
