@@ -6,3 +6,7 @@ npm-debug.log
 README.md
 dist
 coverage
+logs
+uploads
+tests
+*.log
