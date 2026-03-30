@@ -120,7 +120,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
             children: [
               Text(
                 'Select Opponent',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.firaCode(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -132,7 +132,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                   padding: const EdgeInsets.all(20),
                   child: Text(
                     'No friends yet. Follow some users first!',
-                    style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+                    style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
                   ),
                 )
               else
@@ -151,16 +151,16 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                       backgroundColor: AppTheme.primary,
                       child: Text(
                         name[0].toUpperCase(),
-                        style: GoogleFonts.outfit(color: Colors.white),
+                        style: GoogleFonts.firaCode(color: Colors.white),
                       ),
                     ),
                     title: Text(
                       name,
-                      style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                      style: GoogleFonts.firaCode(color: AppTheme.textPrimary),
                     ),
                     subtitle: Text(
                       '@${friend['username']}',
-                      style: GoogleFonts.outfit(color: AppTheme.textMuted),
+                      style: GoogleFonts.firaCode(color: AppTheme.textMuted),
                     ),
                   );
                 }),
@@ -202,7 +202,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
               children: [
                 Text(
                   'Select Topic',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.firaCode(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -235,7 +235,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                         ),
                         title: Text(
                           topic['name'],
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             color: AppTheme.textPrimary,
                           ),
                         ),
@@ -259,7 +259,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
         SnackBar(
           content: Text(
             'Please select opponent and topic',
-            style: GoogleFonts.outfit(),
+            style: GoogleFonts.firaCode(),
           ),
           backgroundColor: AppTheme.error,
         ),
@@ -314,7 +314,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
         ),
         title: Text(
           'Send Challenge',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             color: AppTheme.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -360,7 +360,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                         children: [
                           Text(
                             _isAsync ? 'Async Challenge' : 'Live Duel',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.firaCode(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.textPrimary,
@@ -370,7 +370,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                             _isAsync
                                 ? 'Challenge a friend - they can respond anytime!'
                                 : 'Play a live duel in real-time!',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.firaCode(
                               fontSize: 13,
                               color: AppTheme.textSecondary,
                             ),
@@ -409,7 +409,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                         children: [
                           Text(
                             'Async Mode',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.firaCode(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textPrimary,
@@ -417,7 +417,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                           ),
                           Text(
                             'Play at your own pace',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.firaCode(
                               fontSize: 12,
                               color: AppTheme.textSecondary,
                             ),
@@ -503,7 +503,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                         child: Center(
                           child: Text(
                             '$count',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.firaCode(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: isSelected
@@ -560,7 +560,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                                   const SizedBox(width: 10),
                                   Text(
                                     'Send Challenge',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.firaCode(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white,
@@ -578,7 +578,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                 const SizedBox(height: 16),
                 Text(
                   state.error!,
-                  style: GoogleFonts.outfit(color: AppTheme.error),
+                  style: GoogleFonts.firaCode(color: AppTheme.error),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -592,7 +592,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: GoogleFonts.outfit(
+      style: GoogleFonts.firaCode(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: AppTheme.textPrimary,
@@ -642,7 +642,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.firaCode(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: isSelected
@@ -652,7 +652,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.firaCode(
                       fontSize: 13,
                       color: AppTheme.textMuted,
                     ),
@@ -688,7 +688,7 @@ class _SendChallengeScreenState extends ConsumerState<SendChallengeScreen> {
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.firaCode(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: isSelected ? color : AppTheme.textSecondary,
