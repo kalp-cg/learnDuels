@@ -8,19 +8,21 @@ import '../../core/services/api_service.dart';
 import '../../screens/profile/profile_screen.dart';
 
 // Provider for admin dashboard stats
-final adminStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+final adminStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
+  ref,
+) async {
   final api = ApiService();
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  
+
   if (token == null) return {};
-  
+
   try {
     final response = await api.client.get(
       '/admin/dashboard',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    
+
     if (response.data['success'] == true) {
       return response.data['data'] ?? {};
     }
@@ -32,20 +34,22 @@ final adminStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref
 });
 
 // Provider for moderation queue
-final moderationQueueProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+final moderationQueueProvider = FutureProvider.autoDispose<List<dynamic>>((
+  ref,
+) async {
   final api = ApiService();
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  
+
   if (token == null) return [];
-  
+
   try {
     final response = await api.client.get(
       '/admin/moderation/queue',
       queryParameters: {'status': 'pending', 'limit': 50},
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    
+
     if (response.data['success'] == true) {
       return response.data['data'] ?? [];
     }
@@ -61,16 +65,16 @@ final allUsersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   final api = ApiService();
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  
+
   if (token == null) return [];
-  
+
   try {
     final response = await api.client.get(
       '/admin/users',
-      queryParameters: {'limit': 50}, 
+      queryParameters: {'limit': 50},
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    
+
     if (response.data['success'] == true) {
       return response.data['users'] ?? [];
     }
@@ -88,7 +92,8 @@ class AdminScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminScreen> createState() => _AdminScreenState();
 }
 
-class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProviderStateMixin {
+class _AdminScreenState extends ConsumerState<AdminScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -107,20 +112,20 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
     final api = ApiService();
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
-    
+
     try {
       await api.client.post(
         '/admin/questions/$questionId/approve',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      
+
       ref.invalidate(moderationQueueProvider);
       ref.invalidate(adminStatsProvider);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Question approved!', style: GoogleFonts.outfit()),
+            content: Text('Question approved!', style: GoogleFonts.firaCode()),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -129,7 +134,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to approve: $e', style: GoogleFonts.outfit()),
+            content: Text(
+              'Failed to approve: $e',
+              style: GoogleFonts.firaCode(),
+            ),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -144,14 +152,22 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
         String inputReason = '';
         return AlertDialog(
           backgroundColor: AppTheme.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Reject Reason', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Reject Reason',
+            style: GoogleFonts.firaCode(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           content: TextField(
             onChanged: (v) => inputReason = v,
-            style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            style: GoogleFonts.firaCode(color: AppTheme.textPrimary),
             decoration: InputDecoration(
               hintText: 'Enter rejection reason...',
-              hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
+              hintStyle: GoogleFonts.firaCode(color: AppTheme.textMuted),
               filled: true,
               fillColor: AppTheme.surfaceLight,
               border: OutlineInputBorder(
@@ -163,12 +179,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, inputReason),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-              child: Text('Reject', style: GoogleFonts.outfit()),
+              child: Text('Reject', style: GoogleFonts.firaCode()),
             ),
           ],
         );
@@ -180,21 +199,21 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
     final api = ApiService();
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
-    
+
     try {
       await api.client.post(
         '/admin/questions/$questionId/reject',
         data: {'reason': reason},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      
+
       ref.invalidate(moderationQueueProvider);
       ref.invalidate(adminStatsProvider);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Question rejected', style: GoogleFonts.outfit()),
+            content: Text('Question rejected', style: GoogleFonts.firaCode()),
             backgroundColor: AppTheme.surfaceLight,
           ),
         );
@@ -212,7 +231,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
         backgroundColor: AppTheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppTheme.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -224,10 +246,21 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
                 color: AppTheme.secondary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.secondary, size: 20),
+              child: const Icon(
+                Icons.admin_panel_settings_rounded,
+                color: AppTheme.secondary,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 10),
-            Text('Admin Panel', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              'Admin Panel',
+              style: GoogleFonts.firaCode(
+                color: AppTheme.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
         centerTitle: true,
@@ -237,7 +270,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
           indicatorWeight: 3,
           labelColor: AppTheme.secondary,
           unselectedLabelColor: AppTheme.textMuted,
-          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          labelStyle: GoogleFonts.firaCode(fontWeight: FontWeight.w600),
           tabs: const [
             Tab(text: 'Dashboard'),
             Tab(text: 'Users'),
@@ -269,9 +302,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Overview', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              Text(
+                'Overview',
+                style: GoogleFonts.firaCode(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
               const SizedBox(height: 16),
-              
+
               // Stats grid
               GridView.count(
                 crossAxisCount: 2,
@@ -281,46 +321,107 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
                 mainAxisSpacing: 16,
                 childAspectRatio: 1.5,
                 children: [
-                  _buildStatCard('Total Users', stats['totalUsers']?.toString() ?? '0', Icons.people_rounded, AppTheme.primary),
-                  _buildStatCard('Questions', stats['totalQuestions']?.toString() ?? '0', Icons.quiz_rounded, AppTheme.accent),
-                  _buildStatCard('Pending', stats['pendingQuestions']?.toString() ?? '0', Icons.pending_rounded, AppTheme.tertiary),
-                  _buildStatCard('Duels Today', stats['duelsToday']?.toString() ?? '0', Icons.flash_on_rounded, AppTheme.secondary),
+                  _buildStatCard(
+                    'Total Users',
+                    stats['totalUsers']?.toString() ?? '0',
+                    Icons.people_rounded,
+                    AppTheme.primary,
+                  ),
+                  _buildStatCard(
+                    'Questions',
+                    stats['totalQuestions']?.toString() ?? '0',
+                    Icons.quiz_rounded,
+                    AppTheme.accent,
+                  ),
+                  _buildStatCard(
+                    'Pending',
+                    stats['pendingQuestions']?.toString() ?? '0',
+                    Icons.pending_rounded,
+                    AppTheme.tertiary,
+                  ),
+                  _buildStatCard(
+                    'Duels Today',
+                    stats['duelsToday']?.toString() ?? '0',
+                    Icons.flash_on_rounded,
+                    AppTheme.secondary,
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               // Quick actions
-              Text('Quick Actions', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              Text(
+                'Quick Actions',
+                style: GoogleFonts.firaCode(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
               const SizedBox(height: 16),
-              
-              _buildActionButton('View Moderation Queue', Icons.inbox_rounded, () => _tabController.animateTo(1)),
+
+              _buildActionButton(
+                'View Moderation Queue',
+                Icons.inbox_rounded,
+                () => _tabController.animateTo(1),
+              ),
               const SizedBox(height: 12),
-              _buildActionButton('View Flagged Content', Icons.flag_rounded, () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Coming soon!', style: GoogleFonts.outfit()), backgroundColor: AppTheme.surfaceLight),
-                );
-              }),
+              _buildActionButton(
+                'View Flagged Content',
+                Icons.flag_rounded,
+                () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Coming soon!',
+                        style: GoogleFonts.firaCode(),
+                      ),
+                      backgroundColor: AppTheme.surfaceLight,
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.secondary)),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppTheme.secondary),
+      ),
       error: (e, s) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: AppTheme.error.withValues(alpha: 0.7)),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppTheme.error.withValues(alpha: 0.7),
+            ),
             const SizedBox(height: 16),
-            Text('Failed to load admin data', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+            Text(
+              'Failed to load admin data',
+              style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
+            ),
             const SizedBox(height: 8),
-            Text('Make sure you have admin permissions', style: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 12)),
+            Text(
+              'Make sure you have admin permissions',
+              style: GoogleFonts.firaCode(
+                color: AppTheme.textMuted,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -343,8 +444,21 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-              Text(label, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+              Text(
+                value,
+                style: GoogleFonts.firaCode(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                label,
+                style: GoogleFonts.firaCode(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                ),
+              ),
             ],
           ),
         ],
@@ -373,7 +487,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
               child: Icon(icon, color: AppTheme.textSecondary, size: 20),
             ),
             const SizedBox(width: 14),
-            Expanded(child: Text(label, style: GoogleFonts.outfit(fontSize: 15, color: AppTheme.textPrimary, fontWeight: FontWeight.w500))),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.firaCode(
+                  fontSize: 15,
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
           ],
         ),
@@ -399,12 +522,26 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
                       color: AppTheme.success.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check_circle_rounded, size: 48, color: AppTheme.success),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      size: 48,
+                      color: AppTheme.success,
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  Text('All Caught Up!', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  Text(
+                    'All Caught Up!',
+                    style: GoogleFonts.firaCode(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text('No pending questions to review', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+                  Text(
+                    'No pending questions to review',
+                    style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
+                  ),
                 ],
               ),
             ),
@@ -426,8 +563,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.secondary)),
-      error: (e, s) => Center(child: Text('Error loading queue', style: GoogleFonts.outfit(color: AppTheme.textSecondary))),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppTheme.secondary),
+      ),
+      error: (e, s) => Center(
+        child: Text(
+          'Error loading queue',
+          style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
+        ),
+      ),
     );
   }
 
@@ -437,7 +581,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
     final author = question['author'] ?? {};
     final authorName = author['fullName'] ?? author['username'] ?? 'Unknown';
     final options = question['options'] as List<dynamic>? ?? [];
-    
+
     Color diffColor;
     if (difficulty == 'easy') {
       diffColor = AppTheme.success;
@@ -462,55 +606,102 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: diffColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   difficulty.toString().toUpperCase(),
-                  style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600, color: diffColor),
+                  style: GoogleFonts.firaCode(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: diffColor,
+                  ),
                 ),
               ),
               const Spacer(),
               Text(
                 'By $authorName',
-                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted),
+                style: GoogleFonts.firaCode(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Question content
           Text(
             content,
-            style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary, height: 1.4),
+            style: GoogleFonts.firaCode(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+              height: 1.4,
+            ),
           ),
-          
+
           if (options.isNotEmpty) ...[
             const SizedBox(height: 12),
             ...options.take(4).map((opt) {
               final isCorrect = opt['id'] == question['correctAnswer'];
               return Container(
                 margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: isCorrect ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.surface,
+                  color: isCorrect
+                      ? AppTheme.success.withValues(alpha: 0.1)
+                      : AppTheme.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: isCorrect ? AppTheme.success.withValues(alpha: 0.3) : AppTheme.border.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: isCorrect
+                        ? AppTheme.success.withValues(alpha: 0.3)
+                        : AppTheme.border.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Text('${opt['id']}. ', style: GoogleFonts.outfit(color: isCorrect ? AppTheme.success : AppTheme.textMuted, fontWeight: FontWeight.w600)),
-                    Expanded(child: Text(opt['text'] ?? '', style: GoogleFonts.outfit(color: isCorrect ? AppTheme.success : AppTheme.textSecondary, fontSize: 13))),
-                    if (isCorrect) const Icon(Icons.check_rounded, size: 16, color: AppTheme.success),
+                    Text(
+                      '${opt['id']}. ',
+                      style: GoogleFonts.firaCode(
+                        color: isCorrect
+                            ? AppTheme.success
+                            : AppTheme.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        opt['text'] ?? '',
+                        style: GoogleFonts.firaCode(
+                          color: isCorrect
+                              ? AppTheme.success
+                              : AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    if (isCorrect)
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 16,
+                        color: AppTheme.success,
+                      ),
                   ],
                 ),
               );
             }),
           ],
           const SizedBox(height: 16),
-          
+
           // Action buttons
           Row(
             children: [
@@ -518,12 +709,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
                 child: OutlinedButton.icon(
                   onPressed: () => _rejectQuestion(question['id']),
                   icon: const Icon(Icons.close_rounded, size: 18),
-                  label: Text('Reject', style: GoogleFonts.outfit()),
+                  label: Text('Reject', style: GoogleFonts.firaCode()),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.error,
-                    side: BorderSide(color: AppTheme.error.withValues(alpha: 0.5)),
+                    side: BorderSide(
+                      color: AppTheme.error.withValues(alpha: 0.5),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -531,7 +726,9 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [AppTheme.success, Color(0xFF00C78A)]),
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.success, Color(0xFF00C78A)],
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Material(
@@ -544,9 +741,19 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                            const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                             const SizedBox(width: 6),
-                            Text('Approve', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+                            Text(
+                              'Approve',
+                              style: GoogleFonts.firaCode(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -560,6 +767,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
       ),
     );
   }
+
   Widget _buildUsersList() {
     final usersAsync = ref.watch(allUsersProvider);
 
@@ -567,7 +775,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
       data: (users) {
         if (users.isEmpty) {
           return Center(
-            child: Text('No users found', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+            child: Text(
+              'No users found',
+              style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
+            ),
           );
         }
 
@@ -584,8 +795,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.secondary)),
-      error: (e, s) => Center(child: Text('Error loading users', style: GoogleFonts.outfit(color: AppTheme.textSecondary))),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppTheme.secondary),
+      ),
+      error: (e, s) => Center(
+        child: Text(
+          'Error loading users',
+          style: GoogleFonts.firaCode(color: AppTheme.textSecondary),
+        ),
+      ),
     );
   }
 
@@ -608,46 +826,92 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with SingleTickerProv
         leading: CircleAvatar(
           backgroundColor: AppTheme.primary,
           backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-          child: avatarUrl == null ? Text(username[0].toUpperCase(), style: GoogleFonts.outfit(color: Colors.white)) : null,
+          child: avatarUrl == null
+              ? Text(
+                  username[0].toUpperCase(),
+                  style: GoogleFonts.firaCode(color: Colors.white),
+                )
+              : null,
         ),
-        title: Text(username, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+        title: Text(
+          username,
+          style: GoogleFonts.firaCode(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(email, style: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 13)),
+            Text(
+              email,
+              style: GoogleFonts.firaCode(
+                color: AppTheme.textMuted,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: role == 'admin' ? AppTheme.secondary.withValues(alpha: 0.2) : AppTheme.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: role == 'admin' ? AppTheme.secondary : AppTheme.border.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
                   ),
-                  child: Text(role.toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: role == 'admin' ? AppTheme.secondary : AppTheme.textSecondary)),
+                  decoration: BoxDecoration(
+                    color: role == 'admin'
+                        ? AppTheme.secondary.withValues(alpha: 0.2)
+                        : AppTheme.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: role == 'admin'
+                          ? AppTheme.secondary
+                          : AppTheme.border.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Text(
+                    role.toUpperCase(),
+                    style: GoogleFonts.firaCode(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: role == 'admin'
+                          ? AppTheme.secondary
+                          : AppTheme.textSecondary,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 if (!isActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.error.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text('SUSPENDED', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.error)),
+                    child: Text(
+                      'SUSPENDED',
+                      style: GoogleFonts.firaCode(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.error,
+                      ),
+                    ),
                   ),
               ],
             ),
           ],
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppTheme.textMuted,
+        ),
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => ProfileScreen(userId: user['id']),
-            ),
+            MaterialPageRoute(builder: (context) => const ProfileScreen()),
           );
         },
       ),
