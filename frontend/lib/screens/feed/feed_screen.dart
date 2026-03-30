@@ -52,7 +52,7 @@ class FeedScreen extends ConsumerWidget {
           children: [
             const Icon(Icons.dynamic_feed_rounded, color: AppTheme.accent, size: 22),
             const SizedBox(width: 10),
-            Text('Activity Feed', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text('Activity Feed', style: GoogleFonts.firaCode(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
           ],
         ),
         centerTitle: true,
@@ -77,7 +77,7 @@ class FeedScreen extends ConsumerWidget {
           },
           loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.accent)),
           error: (e, s) => Center(
-            child: Text('Error loading feed', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+            child: Text('Error loading feed', style: GoogleFonts.firaCode(color: AppTheme.textSecondary)),
           ),
         ),
       ),
@@ -102,13 +102,13 @@ class FeedScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             Text(
               'No Activity Yet',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+              style: GoogleFonts.firaCode(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
               'Follow more users to see their activities here!',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textSecondary),
+              style: GoogleFonts.firaCode(fontSize: 14, color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -192,12 +192,12 @@ class FeedScreen extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  style: GoogleFonts.firaCode(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted),
+                  style: GoogleFonts.firaCode(fontSize: 12, color: AppTheme.textMuted),
                 ),
               ],
             ),
@@ -205,7 +205,7 @@ class FeedScreen extends ConsumerWidget {
           if (createdAt != null)
             Text(
               _formatTime(createdAt),
-              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+              style: GoogleFonts.firaCode(fontSize: 11, color: AppTheme.textMuted),
             ),
         ],
       ),
