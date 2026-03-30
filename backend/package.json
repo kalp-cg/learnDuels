@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "test": "jest --detectOpenHandles --forceExit -i",
+    "test:ci": "jest --coverage --runInBand --detectOpenHandles --forceExit -i",
     "dev": "nodemon --watch src --exec node src/server.js",
     "start": "node src/server.js",
     "build": "npx prisma generate",
@@ -70,5 +71,15 @@
     "nodemon": "^3.1.11",
     "socket.io-client": "^4.8.1",
     "supertest": "^7.1.4"
+  },
+  "jest": {
+    "coverageThreshold": {
+      "global": {
+        "branches": 3,
+        "functions": 6,
+        "lines": 20,
+        "statements": 19
+      }
+    }
   }
 }
