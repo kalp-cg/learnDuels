@@ -15,6 +15,7 @@ class SpectatorScreen extends ConsumerStatefulWidget {
 class _SpectatorScreenState extends ConsumerState<SpectatorScreen> {
   Map<String, dynamic>? _duelState;
   bool _isLoading = true;
+  SocketService? _socketService;
 
   @override
   void initState() {
@@ -23,10 +24,10 @@ class _SpectatorScreenState extends ConsumerState<SpectatorScreen> {
   }
 
   void _joinSpectator() {
-    final socketService = ref.read(socketServiceProvider);
+    _socketService = ref.read(socketServiceProvider);
 
     // Listen for initial state
-    socketService.on('spectator:joined', (data) {
+    _socketService?.on('spectator:joined', (data) {
       if (mounted) {
         setState(() {
           _duelState = data;
@@ -36,7 +37,7 @@ class _SpectatorScreenState extends ConsumerState<SpectatorScreen> {
     });
 
     // Listen for updates
-    socketService.on('spectator:update', (data) {
+    _socketService?.on('spectator:update', (data) {
       if (mounted && _duelState != null) {
         setState(() {
           // Update scores
@@ -51,7 +52,7 @@ class _SpectatorScreenState extends ConsumerState<SpectatorScreen> {
       }
     });
 
-    socketService.on('spectator:error', (data) {
+    _socketService?.on('spectator:error', (data) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -61,18 +62,17 @@ class _SpectatorScreenState extends ConsumerState<SpectatorScreen> {
     });
 
     // Join
-    socketService.joinSpectator(widget.duelId, roomId: widget.roomId);
+    _socketService?.joinSpectator(widget.duelId, roomId: widget.roomId);
   }
 
   @override
   void dispose() {
-    final socketService = ref.read(socketServiceProvider);
     if (widget.roomId != null) {
-      socketService.leaveSpectator(widget.roomId!);
+      _socketService?.leaveSpectator(widget.roomId!);
     }
-    socketService.off('spectator:joined');
-    socketService.off('spectator:update');
-    socketService.off('spectator:error');
+    _socketService?.off('spectator:joined');
+    _socketService?.off('spectator:update');
+    _socketService?.off('spectator:error');
     super.dispose();
   }
 
