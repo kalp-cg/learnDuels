@@ -39,11 +39,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           );
 
       if (success && mounted) {
-        // Navigate to Interests Selection for new users
-        Navigator.pushReplacementNamed(context, '/interests');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully!')),
-        );
+        // Replace stack directly; avoid using this context after navigation.
+        Navigator.pushNamedAndRemoveUntil(context, '/interests', (_) => false);
       }
     }
   }
@@ -54,7 +51,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final isLoading = authState is AsyncLoading;
 
     ref.listen(authStateProvider, (previous, next) {
-      if (next is AsyncError) {
+      if (next is AsyncError && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error.toString()),
