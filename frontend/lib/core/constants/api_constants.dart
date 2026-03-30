@@ -1,25 +1,41 @@
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 
 class ApiConstants {
+  static const String _apiBaseUrlOverride = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
+
+  static String _normalizeApiBaseUrl(String base) {
+    final trimmed = base.trim();
+    if (trimmed.isEmpty) return trimmed;
+    return trimmed.endsWith('/api') ? trimmed : '$trimmed/api';
+  }
+
   // Base URL - Update this with your actual backend URL
   // For Android Emulator use 10.0.2.2, for iOS use localhost
   static String get baseUrl {
-    // AWS Backend URL for testing
-    return 'https://app.codinggita.space/api';
+    final override = _normalizeApiBaseUrl(_apiBaseUrlOverride);
+    if (override.isNotEmpty) {
+      return override;
+    }
 
-    /* Original logic preserved:
-    // FORCE localhost for web debugging
+    // AWS Backend URL for testing
+    // return 'https://app.codinggita.space/api';
+
+    // Local development
     if (kIsWeb) {
       return 'http://localhost:4000/api';
     }
-    // Android Emulator
+    // Android (physical device & emulator)
+    // Physical device: use your PC's local network IP
+    // Emulator: use 10.0.2.2
     if (Platform.isAndroid) {
-      // Use 10.0.2.2 for Emulator, or your local IP for physical device
-      // Current Local IP: 10.32.90.150 (Updated automatically)
-      return 'http://10.32.90.150:4000/api';
+      return 'http://10.0.2.2:4000/api';
     }
-    // iOS Simulator / Others
+    // iOS / Others
     return 'http://localhost:4000/api';
-    */
   }
 
   // Auth (Email/Password only - OAuth removed)
