@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme.dart';
 import '../../providers/duel_provider.dart';
 
 class RoomCreationScreen extends ConsumerStatefulWidget {
@@ -38,6 +39,7 @@ class _RoomCreationScreenState extends ConsumerState<RoomCreationScreen>
     // Listen for duel start
     ref.listen(duelStateProvider, (previous, next) {
       next.whenData((data) {
+        if (!mounted) return;
         if (data != null && data['questions'] != null) {
           Navigator.pushReplacementNamed(context, '/duel');
         }
@@ -68,7 +70,7 @@ class _RoomCreationScreenState extends ConsumerState<RoomCreationScreen>
                   const Icon(
                     Icons.add_circle_outline,
                     size: 80,
-                    color: Colors.blue,
+                    color: AppTheme.primary,
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -96,9 +98,11 @@ class _RoomCreationScreenState extends ConsumerState<RoomCreationScreen>
                             setState(() => _questionCount = count);
                           }
                         },
-                        selectedColor: Colors.blue,
+                        selectedColor: AppTheme.primary,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black,
+                          color: isSelected
+                              ? AppTheme.background
+                              : AppTheme.textPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                       );
@@ -134,9 +138,9 @@ class _RoomCreationScreenState extends ConsumerState<RoomCreationScreen>
                       vertical: 16,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
+                      color: AppTheme.surfaceLight,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue, width: 2),
+                      border: Border.all(color: AppTheme.primary, width: 2),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -179,7 +183,7 @@ class _RoomCreationScreenState extends ConsumerState<RoomCreationScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.login, size: 80, color: Colors.green),
+                const Icon(Icons.login, size: 80, color: AppTheme.secondary),
                 const SizedBox(height: 24),
                 const Text(
                   'Enter the 6-character room code shared by your friend.',
@@ -212,7 +216,7 @@ class _RoomCreationScreenState extends ConsumerState<RoomCreationScreen>
                       horizontal: 32,
                       vertical: 16,
                     ),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppTheme.secondary,
                   ),
                   child: const Text('Join Room'),
                 ),
