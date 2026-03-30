@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme.dart';
 import '../../providers/duel_provider.dart';
 import '../../core/services/user_service.dart';
 
@@ -207,13 +208,13 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: AppTheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.hourglass_top_rounded,
                   size: 80,
-                  color: Colors.blue,
+                  color: AppTheme.primary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -221,7 +222,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                 'You Finished!',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+                  color: AppTheme.primary,
                 ),
                 textAlign: TextAlign.center,
               ),
