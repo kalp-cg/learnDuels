@@ -314,7 +314,9 @@ async function initAnalytics() {
   }
 }
 
-// Initialize on startup
-initAnalytics();
+// Initialize on startup (skip during tests to avoid async side effects)
+if (process.env.NODE_ENV !== 'test') {
+  initAnalytics();
+}
 
 module.exports = new AnalyticsService();
