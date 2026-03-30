@@ -47,7 +47,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
         SnackBar(
           content: Text(
             'Please select at least one topic',
-            style: GoogleFonts.outfit(),
+            style: GoogleFonts.firaCode(),
           ),
           backgroundColor: AppTheme.error,
         ),
@@ -132,7 +132,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                           children: [
                             Text(
                               'What interests you?',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.firaCode(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.textPrimary,
@@ -141,7 +141,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'Select topics to personalize your experience',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.firaCode(
                                 fontSize: 14,
                                 color: AppTheme.textSecondary,
                               ),
@@ -166,7 +166,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                   ),
                   child: Text(
                     '${_selectedTopics.length} selected',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.firaCode(
                       fontSize: 13,
                       color: _selectedTopics.isNotEmpty
                           ? AppTheme.primary
@@ -185,7 +185,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                         return Center(
                           child: Text(
                             'No topics available',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.firaCode(
                               color: AppTheme.textSecondary,
                             ),
                           ),
@@ -212,7 +212,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                     error: (e, s) => Center(
                       child: Text(
                         'Error loading topics',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.firaCode(
                           color: AppTheme.textSecondary,
                         ),
                       ),
@@ -261,7 +261,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                                   children: [
                                     Text(
                                       'Continue',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.firaCode(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
                                         color: _selectedTopics.isNotEmpty
@@ -301,7 +301,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                     },
                     child: Text(
                       'Skip for now',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.firaCode(
                         color: AppTheme.textMuted,
                         fontSize: 14,
                       ),
@@ -419,7 +419,7 @@ class _InterestsScreenState extends ConsumerState<InterestsScreen> {
                   const SizedBox(height: 12),
                   Text(
                     name,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.firaCode(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: isSelected ? iconColor : AppTheme.textPrimary,
