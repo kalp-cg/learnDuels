@@ -164,7 +164,6 @@ function requireOwnership(resourceField = 'authorId') {
  * @returns {Function} Middleware function
  */
 function authRateLimit(maxAttempts = 5, windowMs = 15 * 60 * 1000) {
-  return (req, res, next) => next(); // BYPASS RATE LIMIT FOR TESTING
   const attempts = new Map();
 
   return (req, res, next) => {
