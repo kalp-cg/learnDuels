@@ -1,8 +1,11 @@
-# Use lightweight Node.js 18 Alpine image
-FROM node:18-alpine
+# Use lightweight Node.js 20 Alpine image
+FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
+
+# Production mode by default
+ENV NODE_ENV=production
 
 # Install system dependencies required for Prism (OpenSSL)
 RUN apk add --no-cache openssl
@@ -14,7 +17,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm install
+RUN npm ci --omit=dev
 
 # Copy the rest of the application code
 COPY . .
