@@ -1,6 +1,15 @@
 {
+  "scripts": {
+    "quality:check": "npm run quality:core && npm run quality:e2e",
+    "e2e:smoke": "playwright test",
+    "quality:core": "cd backend && npm run test:ci && cd ../frontend && bash scripts/run_safe_tests.sh",
+    "quality:e2e": "cd frontend && flutter build web --release && cd .. && npx playwright install chromium && npm run e2e:smoke"
+  },
   "dependencies": {
     "@socket.io/redis-adapter": "^8.3.0",
     "cheerio": "^1.1.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
   }
 }
