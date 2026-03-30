@@ -2,37 +2,162 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  build:
+  backend:
+    name: Backend Tests
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x]
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: learnduels_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d learnduels_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
-    - name: Install Dependencies
-      working-directory: ./backend
-      run: npm ci
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: npm ci
 
-    - name: Run Tests
-      working-directory: ./backend
-      run: npm test
-      env:
-        NODE_ENV: test
-        DATABASE_URL: postgres://postgres:password@localhost:5432/learnduels_test
-        REDIS_URL: redis://localhost:6379
-        JWT_SECRET: test_secret
+      - name: Wait For Postgres
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U postgres -d learnduels_test && exit 0
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
+        env:
+          PGPASSWORD: password
+
+      - name: Wait For Redis
+        run: |
+          for i in {1..30}; do
+            redis-cli -h localhost -p 6379 ping | grep -q PONG && exit 0
+            echo "Waiting for redis..."
+            sleep 2
+          done
+          echo "Redis did not become ready in time"
+          exit 1
+
+      - name: Apply Database Schema
+        working-directory: ./backend
+        run: npx prisma db push
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost:5432/learnduels_test
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: npm run test:ci
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://postgres:password@localhost:5432/learnduels_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test_secret
+
+      - name: Upload Backend Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+
+  frontend:
+    name: Frontend Analyze, Tests, Web Build, E2E Smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: flutter pub get
+
+      - name: Run Analyze
+        working-directory: ./frontend
+        run: flutter analyze
+
+      - name: Run Tests
+        working-directory: ./frontend
+        run: flutter test --coverage
+
+      - name: Enforce Frontend Coverage
+        working-directory: ./frontend
+        run: bash scripts/check_coverage.sh coverage/lcov.info
+
+      - name: Build Web App
+        working-directory: ./frontend
+        run: flutter build web --release
+
+      - name: Install Playwright Browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Browser Smoke Test
+        run: npm run e2e:smoke
+        env:
+          CI: true
+
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-web-build
+          path: frontend/build/web
+
+      - name: Upload Frontend Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-e2e-report
+          path: playwright-report
