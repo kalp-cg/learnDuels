@@ -62,7 +62,7 @@ class _AnimatedActionButtonState extends State<AnimatedActionButton>
         child: Container(
           height: 140,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: widget.color.withValues(alpha: 0.15),
@@ -104,7 +104,7 @@ class _AnimatedActionButtonState extends State<AnimatedActionButton>
               const SizedBox(height: 12),
               Text(
                 widget.text,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.firaCode(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -180,7 +180,7 @@ class _AnimatedStatsCounterState extends State<AnimatedStatsCounter>
           '${_animation.value}${widget.suffix}',
           style:
               widget.style ??
-              GoogleFonts.outfit(
+              GoogleFonts.firaCode(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
@@ -253,7 +253,7 @@ class _PulsingRankBadgeState extends State<PulsingRankBadge>
         child: Center(
           child: Text(
             '#${widget.rank}',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.firaCode(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.textMuted,
@@ -358,7 +358,7 @@ class _StreakBadgeState extends State<StreakBadge>
             const SizedBox(width: 4),
             Text(
               '${widget.streak} day streak',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.firaCode(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
@@ -405,7 +405,7 @@ class DailyChallengeBanner extends StatelessWidget {
                 children: [
                   Text(
                     'Daily Challenge',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.firaCode(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
@@ -414,7 +414,7 @@ class DailyChallengeBanner extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'Win 3 duels to earn bonus XP!',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.firaCode(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
                     ),
