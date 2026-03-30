@@ -317,7 +317,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                   fit: BoxFit.cover,
                                   width: 120,
                                   height: 120,
-                                  errorBuilder: (_, __, ___) => Container(
+                                  errorBuilder: (
+                                    context,
+                                    error,
+                                    stackTrace,
+                                  ) => Container(
                                     color: Theme.of(context).colorScheme.primary
                                         .withValues(alpha: 0.1),
                                     child: Icon(
