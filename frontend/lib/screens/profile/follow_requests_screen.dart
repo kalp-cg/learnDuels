@@ -18,6 +18,7 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
   final Set<int> _processingIds = {};
 
   late Function(dynamic) _notificationHandler;
+  SocketService? _socketService;
 
   @override
   void initState() {
@@ -44,14 +45,13 @@ class _FollowRequestsScreenState extends ConsumerState<FollowRequestsScreen> {
   }
 
   void _setupSocketListeners() {
-    final socketService = ref.read(socketServiceProvider);
-    socketService.on('notification', _notificationHandler);
+    _socketService = ref.read(socketServiceProvider);
+    _socketService?.on('notification', _notificationHandler);
   }
 
   @override
   void dispose() {
-    final socketService = ref.read(socketServiceProvider);
-    socketService.off('notification', _notificationHandler);
+    _socketService?.off('notification', _notificationHandler);
     super.dispose();
   }
 
