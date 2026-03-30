@@ -25,9 +25,40 @@ let ioInstance;
  */
 function initializeSocket(server) {
   const origin = config.SOCKET_CORS_ORIGIN || config.CORS_ORIGIN;
+  const isDevelopment = config.NODE_ENV === 'development';
+  const allowedOrigins = (origin || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const isLocalDevOrigin = (incomingOrigin) => {
+    if (!isDevelopment || !incomingOrigin) {
+      return false;
+    }
+
+    try {
+      const { hostname } = new URL(incomingOrigin);
+      return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    } catch {
+      return false;
+    }
+  };
+
+  const socketCorsOrigin = (incomingOrigin, callback) => {
+    if (!incomingOrigin) {
+      return callback(null, true);
+    }
+
+    if (origin === '*' || allowedOrigins.includes(incomingOrigin) || isLocalDevOrigin(incomingOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
+  };
+
   const io = new Server(server, {
     cors: {
-      origin: origin,
+      origin: socketCorsOrigin,
       credentials: origin !== '*',
       methods: ['GET', 'POST'],
     },
