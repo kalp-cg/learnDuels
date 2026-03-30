@@ -133,7 +133,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       opacity: _fadeAnimation,
                       child: Text(
                         'LearnDuels',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.firaCode(
                           fontSize: 44,
                           fontWeight: FontWeight.w900,
                           color: AppTheme.primary,
@@ -197,7 +197,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         // Tagline
         Text(
           'Challenge. Learn. Win.',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.firaCode(
             fontSize: 18,
             color: AppTheme.textSecondary,
             fontWeight: FontWeight.w600,
@@ -237,7 +237,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         child: Text(
                           'Get Started',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.surface,
@@ -271,7 +271,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         child: Text(
                           'I already have an account',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.firaCode(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.textSecondary,
