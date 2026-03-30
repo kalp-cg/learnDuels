@@ -6,32 +6,27 @@ import '../../core/services/friend_service.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/theme.dart';
 import '../duel/topic_selection_screen.dart';
+import '../profile/follow_requests_screen.dart';
 
-// Keep alive provider to persist friends list
+// Providers
 final friendsProvider = FutureProvider<List<dynamic>>((ref) async {
   final service = ref.watch(friendServiceProvider);
   return service.getFollowing();
 });
 
-// Provider to fetch all users once
 final allUsersProvider = FutureProvider<List<dynamic>>((ref) async {
   final service = ref.watch(friendServiceProvider);
   return service.getUsers(sortBy: 'newest', limit: 1000);
 });
 
-// State provider for search query
 final findFriendsSearchQueryProvider = StateProvider<String>((ref) => '');
-
-// Track which users are being followed (for loading state)
 final followingInProgressProvider = StateProvider<Set<int>>((ref) => {});
 
-// Provider for follow suggestions/recommendations
 final suggestionsProvider = FutureProvider<List<dynamic>>((ref) async {
   final service = ref.watch(friendServiceProvider);
   try {
     return await service.getRecommendations();
   } catch (e) {
-    // Fallback to users if recommendations endpoint fails
     return await service.getUsers(sortBy: 'popular');
   }
 });
@@ -49,25 +44,30 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   late Function(dynamic) _notificationHandler;
+  SocketService? _socketService;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
+    _socketService = ref.read(socketServiceProvider);
 
     _notificationHandler = (data) {
       if (data['type'] == 'follow_accepted' ||
           data['type'] == 'follow_declined') {
         if (mounted) {
-          // Refresh lists
           ref.invalidate(friendsProvider);
           ref.invalidate(allUsersProvider);
-
           if (data['type'] == 'follow_accepted') {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('${data['message']}')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${data['message']}',
+                  style: AppTheme.mono(fontSize: 13),
+                ),
+              ),
+            );
           }
         }
       }
@@ -79,16 +79,14 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   }
 
   void _setupSocketListeners() {
-    final socketService = ref.read(socketServiceProvider);
-    socketService.on('notification', _notificationHandler);
+    _socketService?.on('notification', _notificationHandler);
   }
 
   void _handleTabChange() {
     if (!_tabController.indexIsChanging && mounted) {
-      // Refresh data when switching tabs
       if (_tabController.index == 0) {
         ref.invalidate(friendsProvider);
-      } else {
+      } else if (_tabController.index == 1) {
         ref.invalidate(allUsersProvider);
       }
     }
@@ -96,9 +94,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
 
   @override
   void dispose() {
-    final socketService = ref.read(socketServiceProvider);
-    socketService.off('notification', _notificationHandler);
-
+    _socketService?.off('notification', _notificationHandler);
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     _searchController.dispose();
@@ -110,36 +106,27 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
-        setState(() {
-          ref.read(findFriendsSearchQueryProvider.notifier).state = query;
-        });
+        ref.read(findFriendsSearchQueryProvider.notifier).state = query;
       }
     });
   }
 
   Future<void> _followUser(int userId) async {
-    // Add to in-progress set
     ref
         .read(followingInProgressProvider.notifier)
         .update((state) => {...state, userId});
-
     try {
       await ref.read(friendServiceProvider).followUser(userId);
-
-      // Refresh both lists
       ref.invalidate(allUsersProvider);
       ref.invalidate(friendsProvider);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Follow request successfully sent',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+              'Follow request sent',
+              style: AppTheme.mono(fontSize: 13, color: AppTheme.success),
             ),
-            backgroundColor: AppTheme.success,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
+            backgroundColor: AppTheme.surface,
           ),
         );
       }
@@ -149,15 +136,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           SnackBar(
             content: Text(
               'Failed to follow: $e',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+              style: AppTheme.mono(fontSize: 12),
             ),
             backgroundColor: AppTheme.error,
-            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } finally {
-      // Remove from in-progress set
       ref.read(followingInProgressProvider.notifier).update((state) {
         final newState = {...state};
         newState.remove(userId);
@@ -169,21 +154,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   Future<void> _unfollowUser(int userId) async {
     try {
       await ref.read(friendServiceProvider).unfollowUser(userId);
-
-      // Refresh both lists
       ref.invalidate(friendsProvider);
       ref.invalidate(allUsersProvider);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'User unfollowed',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
-            ),
-            backgroundColor: AppTheme.surfaceLight,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
+            content: Text('Unfollowed', style: AppTheme.mono(fontSize: 13)),
+            backgroundColor: AppTheme.surface,
           ),
         );
       }
@@ -191,12 +168,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Failed to unfollow: $e',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
-            ),
+            content: Text('Failed: $e', style: AppTheme.mono(fontSize: 12)),
             backgroundColor: AppTheme.error,
-            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -207,34 +180,87 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surface,
-        elevation: 0,
-        title: Text(
-          'Friends',
-          style: GoogleFonts.outfit(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.primary,
-          indicatorWeight: 3,
-          labelColor: AppTheme.primary,
-          unselectedLabelColor: AppTheme.textMuted,
-          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-          tabs: const [
-            Tab(text: 'My Friends'),
-            Tab(text: 'Find Friends'),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Network',
+                    style: GoogleFonts.firaCode(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(
+                          Icons.person_add_outlined,
+                          color: AppTheme.textSecondary,
+                          size: 22,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(
+                          Icons.search_rounded,
+                          color: AppTheme.textSecondary,
+                          size: 22,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Tabs
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: AppTheme.primary,
+                indicatorWeight: 2,
+                labelColor: AppTheme.textPrimary,
+                unselectedLabelColor: AppTheme.textMuted,
+                labelStyle: GoogleFonts.firaCode(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+                unselectedLabelStyle: GoogleFonts.firaCode(
+                  fontSize: 13,
+                  letterSpacing: 0.5,
+                ),
+                dividerColor: AppTheme.border,
+                tabs: const [
+                  Tab(text: 'Friends'),
+                  Tab(text: 'Discover'),
+                  Tab(text: 'Requests'),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildFriendsList(),
+                  _buildFindFriendsList(),
+                  const FollowRequestsScreen(),
+                ],
+              ),
+            ),
           ],
-        ),
-      ),
-      body: Container(
-        color: AppTheme.background,
-        child: TabBarView(
-          controller: _tabController,
-          children: [_buildFriendsList(), _buildFindFriendsList()],
         ),
       ),
     );
@@ -248,258 +274,233 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
       color: AppTheme.primary,
       child: friendsAsync.when(
         data: (friends) {
-          if (friends.isEmpty) {
-            return _buildEmptyFriendsState();
-          }
+          if (friends.isEmpty) return _buildEmptyState();
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             itemCount: friends.length,
-            itemBuilder: (context, index) {
-              final friend = friends[index];
-              return _buildFriendCard(friend);
-            },
+            itemBuilder: (context, index) => _buildFriendCard(friends[index]),
           );
         },
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppTheme.primary),
         ),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: AppTheme.error.withValues(alpha: 0.7),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading friends',
-                style: GoogleFonts.outfit(color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => ref.invalidate(friendsProvider),
-                child: Text(
-                  'Retry',
-                  style: GoogleFonts.outfit(color: AppTheme.primary),
-                ),
-              ),
-            ],
-          ),
-        ),
+        error: (err, _) =>
+            _buildErrorState(() => ref.invalidate(friendsProvider)),
       ),
     );
   }
 
-  Widget _buildEmptyFriendsState() {
+  Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceLight,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.people_outline_rounded,
-                size: 48,
-                color: AppTheme.textMuted.withValues(alpha: 0.5),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: const Icon(
+              Icons.people_outline_rounded,
+              size: 40,
+              color: AppTheme.textMuted,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'NO_CONNECTIONS',
+            style: GoogleFonts.firaCode(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Find players to connect with',
+            style: AppTheme.body(fontSize: 13, color: AppTheme.textMuted),
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () => _tabController.animateTo(1),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppTheme.primary),
+              foregroundColor: AppTheme.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'No Friends Yet',
-              style: GoogleFonts.outfit(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
-              ),
+            child: Text(
+              'DISCOVER_USERS',
+              style: GoogleFonts.firaCode(fontSize: 12, letterSpacing: 0.5),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Find and follow other players to add them to your friends list!',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton.icon(
-              onPressed: () => _tabController.animateTo(1),
-              icon: const Icon(Icons.search_rounded),
-              label: Text(
-                'Find Friends',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primary,
-                side: const BorderSide(color: AppTheme.primary),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildFriendCard(Map<String, dynamic> friend) {
     final displayName = friend['fullName'] ?? friend['username'] ?? 'User';
+    final username = friend['username'] ?? 'user';
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
     final friendId = friend['id'];
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+      margin: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppTheme.primary,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: friend['avatarUrl'] != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.network(
-                      friend['avatarUrl'],
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Center(
-                    child: Text(
-                      initial,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
-                      ),
-                    ),
+          // Avatar with online indicator
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: AppTheme.surfaceLight,
+                backgroundImage: friend['avatarUrl'] != null
+                    ? NetworkImage(friend['avatarUrl'])
+                    : null,
+                child: friend['avatarUrl'] == null
+                    ? Text(
+                        initial,
+                        style: GoogleFonts.firaCode(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
+                        ),
+                      )
+                    : null,
+              ),
+              // Online dot
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppTheme.background, width: 2),
                   ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 14),
+
+          // Name
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   displayName,
-                  style: GoogleFonts.outfit(
-                    color: AppTheme.textPrimary,
+                  style: GoogleFonts.firaCode(
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '@${friend['username'] ?? 'user'}',
-                  style: GoogleFonts.outfit(
-                    color: AppTheme.textMuted,
-                    fontSize: 13,
-                  ),
+                  '@$username',
+                  style: AppTheme.body(fontSize: 12, color: AppTheme.textMuted),
                 ),
               ],
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TopicSelectionScreen(
-                            opponentId: friendId,
-                            opponentName: displayName,
-                          ),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.flash_on_rounded,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Duel',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
+
+          // Duel button
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppTheme.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TopicSelectionScreen(
+                        opponentId: friendId,
+                        opponentName: displayName,
                       ),
                     ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.bolt_rounded,
+                        size: 14,
+                        color: AppTheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'DUEL',
+                        style: GoogleFonts.firaCode(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              PopupMenuButton(
-                icon: Icon(Icons.more_vert_rounded, color: AppTheme.textMuted),
-                color: AppTheme.surface,
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'unfollow',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.person_remove_rounded,
-                          color: AppTheme.error,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Unfollow',
-                          style: GoogleFonts.outfit(
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                      ],
+            ),
+          ),
+
+          PopupMenuButton(
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: AppTheme.textMuted,
+              size: 20,
+            ),
+            color: AppTheme.surface,
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'unfollow',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.person_remove_rounded,
+                      color: AppTheme.error,
+                      size: 18,
                     ),
-                  ),
-                ],
-                onSelected: (value) async {
-                  if (value == 'unfollow') {
-                    await _unfollowUser(friendId);
-                  }
-                },
+                    const SizedBox(width: 8),
+                    Text(
+                      'Unfollow',
+                      style: AppTheme.body(color: AppTheme.textPrimary),
+                    ),
+                  ],
+                ),
               ),
             ],
+            onSelected: (value) async {
+              if (value == 'unfollow') await _unfollowUser(friendId);
+            },
           ),
         ],
       ),
@@ -513,25 +514,27 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
 
     return Column(
       children: [
-        // Search Bar
-        Container(
-          padding: const EdgeInsets.all(16),
+        // Search
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: TextField(
             controller: _searchController,
             onChanged: _onSearchChanged,
-            style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            style: AppTheme.body(fontSize: 14, color: AppTheme.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Search by name or username...',
-              hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
+              hintText: 'Search username...',
+              hintStyle: AppTheme.body(fontSize: 14, color: AppTheme.textMuted),
               prefixIcon: const Icon(
                 Icons.search_rounded,
-                color: AppTheme.primary,
+                color: AppTheme.textMuted,
+                size: 20,
               ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(
                         Icons.clear_rounded,
                         color: AppTheme.textMuted,
+                        size: 18,
                       ),
                       onPressed: () {
                         _searchController.clear();
@@ -542,100 +545,69 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
               filled: true,
               fillColor: AppTheme.surfaceLight,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppTheme.border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.border.withValues(alpha: 0.3),
-                ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppTheme.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                  color: AppTheme.primary,
+                  width: 1.5,
+                ),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 14,
+                vertical: 12,
               ),
             ),
           ),
         ),
-        // Users List
+
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async => ref.invalidate(allUsersProvider),
             color: AppTheme.primary,
             child: usersAsync.when(
               data: (allUsers) {
-                // Filter users based on search query
-                final filteredUsers = searchQuery.isEmpty
+                final filtered = searchQuery.isEmpty
                     ? allUsers
-                    : allUsers.where((user) {
-                        final name = (user['fullName'] ?? '')
+                    : allUsers.where((u) {
+                        final name = (u['fullName'] ?? '')
                             .toString()
                             .toLowerCase();
-                        final username = (user['username'] ?? '')
+                        final uname = (u['username'] ?? '')
                             .toString()
                             .toLowerCase();
-                        final query = searchQuery.toLowerCase();
-                        return name.contains(query) || username.contains(query);
+                        final q = searchQuery.toLowerCase();
+                        return name.contains(q) || uname.contains(q);
                       }).toList();
 
-                if (filteredUsers.isEmpty) {
+                if (filtered.isEmpty) {
                   return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        searchQuery.isEmpty
-                            ? 'No users found.'
-                            : 'No users match "$searchQuery"',
-                        style: GoogleFonts.outfit(
-                          color: AppTheme.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    child: Text(
+                      searchQuery.isEmpty
+                          ? 'No users found'
+                          : 'No match for "$searchQuery"',
+                      style: AppTheme.body(color: AppTheme.textMuted),
                     ),
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filteredUsers.length,
-                  itemBuilder: (context, index) {
-                    final user = filteredUsers[index];
-                    return _buildUserCard(user, followingInProgress);
-                  },
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) =>
+                      _buildUserCard(filtered[index], followingInProgress),
                 );
               },
               loading: () => const Center(
                 child: CircularProgressIndicator(color: AppTheme.primary),
               ),
-              error: (err, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: AppTheme.error.withValues(alpha: 0.7),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading users',
-                      style: GoogleFonts.outfit(color: AppTheme.textSecondary),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () => ref.invalidate(allUsersProvider),
-                      child: Text(
-                        'Retry',
-                        style: GoogleFonts.outfit(color: AppTheme.primary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              error: (error, stackTrace) =>
+                  _buildErrorState(() => ref.invalidate(allUsersProvider)),
             ),
           ),
         ),
@@ -648,193 +620,155 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     Set<int> followingInProgress,
   ) {
     final followStatus = user['followStatus'];
-    // Defensive check: if status is accepted, treat as following even if isFollowing is false
     final isFollowing =
         (user['isFollowing'] ?? false) || followStatus == 'accepted';
     final isPending = followStatus == 'pending';
     final userId = user['id'] as int;
     final isLoading = followingInProgress.contains(userId);
     final displayName = user['fullName'] ?? user['username'] ?? 'User';
+    final username = user['username'] ?? 'user';
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+      margin: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppTheme.accent.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: user['avatarUrl'] != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.network(user['avatarUrl'], fit: BoxFit.cover),
-                  )
-                : Center(
-                    child: Text(
-                      initial,
-                      style: GoogleFonts.outfit(
-                        color: AppTheme.accent,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
-                      ),
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: AppTheme.surfaceLight,
+            backgroundImage: user['avatarUrl'] != null
+                ? NetworkImage(user['avatarUrl'])
+                : null,
+            child: user['avatarUrl'] == null
+                ? Text(
+                    initial,
+                    style: GoogleFonts.firaCode(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
                     ),
-                  ),
+                  )
+                : null,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   displayName,
-                  style: GoogleFonts.outfit(
-                    color: AppTheme.textPrimary,
+                  style: GoogleFonts.firaCode(
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  'Joined ${user['createdAt'].toString().split('T')[0]}',
-                  style: GoogleFonts.outfit(
-                    color: AppTheme.textMuted,
-                    fontSize: 13,
-                  ),
+                  '@$username',
+                  style: AppTheme.body(fontSize: 12, color: AppTheme.textMuted),
                 ),
               ],
             ),
           ),
-          isLoading
-              ? const SizedBox(
-                  width: 80,
-                  child: Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ),
-                )
-              : isFollowing
-              ? GestureDetector(
-                  onTap: () => _unfollowUser(userId),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppTheme.success.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_rounded,
-                          size: 16,
-                          color: AppTheme.success,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Following',
-                          style: GoogleFonts.outfit(
-                            color: AppTheme.success,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : isPending
-              ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.textMuted.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppTheme.textMuted.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.access_time_rounded,
-                        size: 16,
-                        color: AppTheme.textMuted,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Pending',
-                        style: GoogleFonts.outfit(
-                          color: AppTheme.textMuted,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.accent,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _followUser(userId),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.person_add_rounded,
-                              size: 16,
-                              color: Colors.black87,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Follow',
-                              style: GoogleFonts.outfit(
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+
+          if (isLoading)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppTheme.primary,
+              ),
+            )
+          else if (isFollowing)
+            _statusChip(
+              'FOLLOWING',
+              AppTheme.secondary,
+              () => _unfollowUser(userId),
+            )
+          else if (isPending)
+            _statusChip('PENDING', AppTheme.textMuted, null)
+          else
+            GestureDetector(
+              onTap: () => _followUser(userId),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'FOLLOW',
+                  style: GoogleFonts.firaCode(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.background,
+                    letterSpacing: 0.5,
                   ),
                 ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusChip(String label, Color color, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.firaCode(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(VoidCallback onRetry) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 40, color: AppTheme.error),
+          const SizedBox(height: 12),
+          Text(
+            'CONNECTION_ERROR',
+            style: GoogleFonts.firaCode(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(
+              'RETRY',
+              style: GoogleFonts.firaCode(
+                fontSize: 13,
+                color: AppTheme.primary,
+              ),
+            ),
+          ),
         ],
       ),
     );
