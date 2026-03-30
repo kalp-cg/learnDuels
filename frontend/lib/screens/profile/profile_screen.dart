@@ -1,682 +1,789 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/auth_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme.dart';
 import '../../providers/user_provider.dart';
-import '../../core/services/socket_service.dart';
-
-import '../duel/topic_selection_screen.dart';
+import '../../providers/auth_provider.dart';
 import 'edit_profile_screen.dart';
-import '../friends/friends_screen.dart';
 import 'saved_questions_screen.dart';
 import 'my_contributions_screen.dart';
-import 'dart:async';
 
 class ProfileScreen extends ConsumerStatefulWidget {
-  final int? userId; // If null, shows current user's profile
-
-  const ProfileScreen({super.key, this.userId});
+  const ProfileScreen({super.key});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen>
-    with AutomaticKeepAliveClientMixin {
-  Timer? _refreshTimer;
-  late Function(dynamic) _notificationHandler;
-
-  @override
-  bool get wantKeepAlive => true; // Keep state when switching tabs
-
-  bool get isCurrentUser => widget.userId == null;
-
-  @override
-  void initState() {
-    super.initState();
-    // Reduced from 30s to 120s for smoother performance
-    _refreshTimer = Timer.periodic(const Duration(seconds: 120), (_) {
-      if (mounted) {
-        _refreshData();
-      }
-    });
-
-    _notificationHandler = (data) {
-      if (data['type'] == 'follow_accepted' ||
-          data['type'] == 'follow_declined') {
-        if (mounted) {
-          // If viewing the profile of the person who accepted/declined
-          if (!isCurrentUser && widget.userId == data['userId']) {
-            _refreshData();
-          }
-          // If viewing own profile, following count changed (only for accepted)
-          if (isCurrentUser && data['type'] == 'follow_accepted') {
-            _refreshData();
-          }
-        }
-      }
-    };
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setupSocketListeners();
-    });
-  }
-
-  void _setupSocketListeners() {
-    final socketService = ref.read(socketServiceProvider);
-    socketService.on('notification', _notificationHandler);
-  }
-
-  void _refreshData() {
-    if (isCurrentUser) {
-      ref.invalidate(userProfileProvider);
-      ref.invalidate(userStatsProvider);
-    } else {
-      ref.invalidate(otherUserProfileProvider(widget.userId!));
-      // ref.invalidate(otherUserStatsProvider(widget.userId!)); // If we implement this later
-    }
-  }
-
-  @override
-  void dispose() {
-    final socketService = ref.read(socketServiceProvider);
-    socketService.off('notification', _notificationHandler);
-    _refreshTimer?.cancel();
-    super.dispose();
-  }
-
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
-    final profileAsync = isCurrentUser
-        ? ref.watch(userProfileProvider)
-        : ref.watch(otherUserProfileProvider(widget.userId!));
+    final userAsync = ref.watch(userProfileProvider);
 
-    final statsAsync = isCurrentUser
-        ? ref.watch(userStatsProvider)
-        : const AsyncValue.data(null); // No detailed stats for others yet
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: userAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppTheme.primary),
+        ),
+        error: (e, _) => _buildErrorState(e.toString()),
+        data: (user) {
+          if (user == null) {
+            return _buildErrorState('No user data returned.');
+          }
+          return _buildProfileContent(user);
+        },
+      ),
+    );
+  }
 
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => _refreshData(),
-          color: Theme.of(context).colorScheme.primary,
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 32),
-              profileAsync.when(
-                data: (profile) => _buildProfileSection(profile, statsAsync),
-                loading: () => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
+  Widget _buildErrorState(String message) {
+    final sessionExpired =
+        message.contains('Session expired') ||
+        message.contains('Not logged in') ||
+        message.contains('token');
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              sessionExpired ? Icons.lock_outline : Icons.error_outline,
+              color: sessionExpired ? AppTheme.tertiary : AppTheme.error,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              sessionExpired ? 'SESSION_EXPIRED' : 'LOAD_FAILED',
+              style: GoogleFonts.firaCode(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTheme.body(fontSize: 13, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 24),
+            if (!sessionExpired)
+              OutlinedButton(
+                onPressed: () => ref.invalidate(userProfileProvider),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.primary),
+                  foregroundColor: AppTheme.primary,
                 ),
-                error: (err, stack) => Center(
-                  child: Text(
-                    'Error loading profile',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
+                child: Text(
+                  'RETRY',
+                  style: GoogleFonts.firaCode(fontSize: 12, letterSpacing: 0.5),
                 ),
               ),
-              const SizedBox(height: 32),
-              if (isCurrentUser) ...[
-                statsAsync.when(
-                  data: (stats) => _buildStatsSection(stats),
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Actions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildActionItem('Friends', Icons.people_rounded, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const FriendsScreen(),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 8),
-                _buildActionItem('My Vault', Icons.bookmark_rounded, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SavedQuestionsScreen(),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 8),
-                _buildActionItem('My Contributions', Icons.quiz_rounded, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MyContributionsScreen(),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 8),
-                _buildActionItem('Edit Profile', Icons.edit_rounded, () {
-                  final profile = profileAsync.value;
-                  if (profile != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            EditProfileScreen(currentProfile: profile),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please wait for profile to load'),
-                      ),
-                    );
-                  }
-                }),
-                const SizedBox(height: 8),
-                _buildActionItem('Logout', Icons.logout_rounded, () {
-                  ref.read(authStateProvider.notifier).logout();
-                  Navigator.pushReplacementNamed(context, '/login');
-                }, isDestructive: true),
-              ] else ...[
-                // Actions for other users
-                const SizedBox(height: 32),
-                Text(
-                  'Actions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildActionItem('Challenge to Duel', Icons.sports_esports, () {
-                  final profile = profileAsync.value;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TopicSelectionScreen(
-                        opponentId: widget.userId!,
-                        opponentName: profile?['fullName'] ?? 'Opponent',
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ],
-          ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () {
+                ref.read(authStateProvider.notifier).logout();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppTheme.tertiary),
+                foregroundColor: AppTheme.tertiary,
+              ),
+              child: Text(
+                sessionExpired ? 'LOG_IN_AGAIN' : 'LOGOUT',
+                style: GoogleFonts.firaCode(fontSize: 12, letterSpacing: 0.5),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        if (!isCurrentUser)
-          IconButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            icon: Icon(
-              Icons.arrow_back_ios,
-              color: Theme.of(context).iconTheme.color,
-              size: 24,
-            ),
-          ),
-        if (!isCurrentUser) const SizedBox(width: 8),
-        Text(
-          isCurrentUser ? 'My Profile' : 'Profile',
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const Spacer(),
-        if (isCurrentUser) ...[
-          IconButton(
-            onPressed: () async {
-              await Navigator.pushNamed(context, '/follow-requests');
-              // Refresh profile data when returning (to update follower counts etc)
-              _refreshData();
-            },
-            icon: Icon(
-              Icons.person_add_rounded,
-              color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
-            ),
-            tooltip: 'Follow Requests',
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: Icon(
-              Icons.settings_rounded,
-              color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
+  Widget _buildProfileContent(Map<String, dynamic> user) {
+    final username = user['username'] ?? 'user';
+    final bio = user['bio'] ?? '';
+    final avatarUrl = user['avatarUrl'];
+    final level = user['level'] ?? 1;
+    final xp = user['xp'] ?? 0;
+    final rating = user['rating'] ?? 1200;
+    final reputation = user['reputation'] ?? 0;
+    final streak = user['currentStreak'] ?? 0;
+    final solved = user['questionsSolved'] ?? 0;
+    final followers = user['followersCount'] ?? 0;
+    final following = user['followingCount'] ?? 0;
 
-  Widget _buildProfileSection(
-    Map<String, dynamic>? profile,
-    AsyncValue<Map<String, dynamic>?> statsAsync,
-  ) {
-    if (profile == null) return const SizedBox();
-
-    final username = profile['username'] ?? 'Player';
-    final fullName = profile['fullName'];
-    final email = profile['email'] ?? '';
-    final level = profile['level'] ?? 1;
-    final xp = profile['xp'] ?? 0;
-    final reputation = profile['reputation'] ?? 0;
-    final avatarUrl = profile['avatarUrl'];
-    final bio = profile['bio'];
-    final currentStreak = profile['currentStreak'] ?? 0;
-    final longestStreak = profile['longestStreak'] ?? 0;
-
-    return Column(
-      children: [
-        // Streak Card
-        if (isCurrentUser) ...[
-          Container(
-            margin: const EdgeInsets.only(bottom: 24),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF5722), // Deep Orange
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF5722).withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(userProfileProvider),
+        color: AppTheme.primary,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          children: [
+            // Profile header
+            Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.local_fire_department_rounded,
-                    color: Colors.white,
-                    size: 32,
-                  ),
+                // Avatar with level badge
+                Stack(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.border, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: avatarUrl != null
+                            ? Image.network(
+                                avatarUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (
+                                  context,
+                                  error,
+                                  stackTrace,
+                                ) =>
+                                    _defaultAvatar(username),
+                              )
+                            : _defaultAvatar(username),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'LVL $level',
+                            style: GoogleFonts.firaCode(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.background,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 16),
+                // Username + bio + followers
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '$currentStreak Day Streak!',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            username,
+                            style: GoogleFonts.firaCode(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _showSettingsMenu(context),
+                            icon: const Icon(
+                              Icons.settings_outlined,
+                              color: AppTheme.textSecondary,
+                              size: 22,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Longest: $longestStreak days',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
+                      if (bio.isNotEmpty)
+                        Text(
+                          bio,
+                          style: AppTheme.body(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            _formatCount(followers),
+                            style: GoogleFonts.firaCode(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            ' followers  ',
+                            style: AppTheme.body(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          Text(
+                            _formatCount(following),
+                            style: GoogleFonts.firaCode(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            ' following',
+                            style: AppTheme.body(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.3),
-              width: 2,
+            const SizedBox(height: 24),
+
+            // Stats grid
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    'REPUTATION',
+                    '$reputation',
+                    '+12%',
+                    AppTheme.secondary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatCard(
+                    'ELO RATING',
+                    '$rating',
+                    'TOP 5%',
+                    AppTheme.primary,
+                  ),
+                ),
+              ],
             ),
-          ),
-          child: ClipOval(
-            child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                ? Image.network(
-                    avatarUrl,
-                    fit: BoxFit.cover,
-                    width: 100,
-                    height: 100,
-                    errorBuilder: (_, _, _) => Center(
-                      child: Text(
-                        username.isNotEmpty ? username[0].toUpperCase() : '?',
-                        style: TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.primary,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard('SOLVED', '$solved', null, null),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatCard('STREAK', '$streak', 'DAYS', null),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // XP Progression chart
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: AppTheme.terminalCard(borderRadius: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'XP PROGRESSION',
+                        style: GoogleFonts.firaCode(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                    ),
-                  )
-                : Center(
-                    child: Text(
-                      username.isNotEmpty ? username[0].toUpperCase() : '?',
-                      style: TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.primary,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.secondary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.trending_up_rounded,
+                              size: 14,
+                              color: AppTheme.secondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Weekly +${(xp * 0.1).toInt()} XP',
+                              style: GoogleFonts.firaCode(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.secondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Chart placeholder
+                  SizedBox(
+                    height: 120,
+                    child: CustomPaint(
+                      size: const Size(double.infinity, 120),
+                      painter: _XPChartPainter(),
                     ),
                   ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          fullName ?? username,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        if (fullName != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            '@$username',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-          ),
-        ],
-        const SizedBox(height: 6),
-        if (isCurrentUser)
-          Text(
-            email,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
-          ),
-        if (bio != null && bio.toString().isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              bio,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                height: 1.4,
-                fontStyle: FontStyle.italic,
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                        .map(
+                          (d) => Text(
+                            d,
+                            style: GoogleFonts.firaCode(
+                              fontSize: 10,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 24),
+
+            // Topic mastery
+            Text(
+              'TOPIC MASTERY',
+              style: GoogleFonts.firaCode(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMasteryCard(
+                    'Data Structures',
+                    0.85,
+                    AppTheme.secondary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildMasteryCard(
+                    'Algorithms',
+                    0.62,
+                    AppTheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Recent activity
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'RECENT ACTIVITY',
+                  style: GoogleFonts.firaCode(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'VIEW LOG',
+                  style: GoogleFonts.firaCode(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildActivityItem(
+              Icons.emoji_events_rounded,
+              AppTheme.secondary,
+              'Won Duel vs. opponent',
+              'Topic: Graph Theory • +25 ELO',
+              '2m ago',
+            ),
+            _buildActivityItem(
+              Icons.check_circle_outline,
+              AppTheme.textSecondary,
+              'Completed Daily Challenge',
+              'Arrays & Hashing • +50 XP',
+              '4h ago',
+            ),
+            _buildActivityItem(
+              Icons.arrow_upward_rounded,
+              AppTheme.primary,
+              'Leveled Up to $level',
+              'Milestone reached',
+              '1d ago',
+            ),
+            _buildActivityItem(
+              Icons.person_add_rounded,
+              AppTheme.warning,
+              'New Follower',
+              'Someone started following you',
+              '2d ago',
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _defaultAvatar(String username) {
+    return Container(
+      color: AppTheme.surfaceLight,
+      alignment: Alignment.center,
+      child: Text(
+        username.length >= 2
+            ? username.substring(0, 2).toUpperCase()
+            : username.toUpperCase(),
+        style: GoogleFonts.firaCode(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    String label,
+    String value,
+    String? badge,
+    Color? badgeColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: AppTheme.terminalCard(borderRadius: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.firaCode(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textMuted,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.firaCode(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              if (badge != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  badge,
+                  style: GoogleFonts.firaCode(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: badgeColor ?? AppTheme.textMuted,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildBadge('Lvl $level', Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 12),
-            _buildBadge('$xp XP', Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 12),
-            _buildBadge(
-              '$reputation Rep',
-              Theme.of(context).colorScheme.primary,
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildStatCount('Solved', profile['questionsSolved'] ?? 0),
-            const SizedBox(width: 24),
-            _buildStatCount('Quizzes', profile['quizzesCompleted'] ?? 0),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildStatCount(String label, int count) {
-    return Column(
-      children: [
-        Text(
-          count.toString(),
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBadge(String text, Color color) {
+  Widget _buildMasteryCard(String topic, double progress, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsSection(Map<String, dynamic>? stats) {
-    if (stats == null) return const SizedBox();
-
-    final wins = stats['wins'] ?? 0;
-    final losses = stats['losses'] ?? 0;
-    // final draws = stats['draws'] ?? 0;
-    final totalDuels = stats['totalDuels'] ?? 0;
-    final winRate = totalDuels > 0 ? (wins / totalDuels * 100).toInt() : 0;
-
-    final correctAnswers = stats['correctAnswers'] ?? 0;
-    final totalAnswers = stats['totalAnswers'] ?? 0;
-    final wrongAnswers = stats['wrongAnswers'] ?? 0;
-    final accuracy = totalAnswers > 0
-        ? (correctAnswers / totalAnswers * 100).toInt()
-        : 0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Statistics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.3,
+      padding: const EdgeInsets.all(14),
+      decoration: AppTheme.terminalCard(borderRadius: 12),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 4,
+                  backgroundColor: AppTheme.border,
+                  color: color,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-          ),
-          child: Column(
+          const SizedBox(width: 12),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Duel Stats',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+                topic,
+                style: GoogleFonts.firaCode(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textPrimary,
+                ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _buildStatItem('Wins', wins.toString())),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Theme.of(context).dividerColor,
-                  ),
-                  Expanded(child: _buildStatItem('Losses', losses.toString())),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Theme.of(context).dividerColor,
-                  ),
-                  Expanded(child: _buildStatItem('Win Rate', '$winRate%')),
-                ],
-              ),
-              const SizedBox(height: 24),
               Text(
-                'Question Stats',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem('Correct', correctAnswers.toString()),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Theme.of(context).dividerColor,
-                  ),
-                  Expanded(
-                    child: _buildStatItem('Wrong', wrongAnswers.toString()),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(child: _buildStatItem('Accuracy', '$accuracy%')),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Theme.of(context).dividerColor,
-                  ),
-                  Expanded(
-                    child: _buildStatItem(
-                      'Total Attempted',
-                      totalAnswers.toString(),
-                    ),
-                  ),
-                ],
+                '${(progress * 100).toInt()}%',
+                style: GoogleFonts.firaCode(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(
-              context,
-            ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionItem(
-    String text,
+  Widget _buildActivityItem(
     IconData icon,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDestructive
-                ? Theme.of(context).colorScheme.error.withValues(alpha: 0.2)
-                : Theme.of(context).dividerColor,
-            width: 1,
+    Color color,
+    String title,
+    String subtitle,
+    String time,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      margin: const EdgeInsets.only(bottom: 2),
+      decoration: AppTheme.terminalCard(borderRadius: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isDestructive
-                  ? Theme.of(context).colorScheme.error.withValues(alpha: 0.8)
-                  : Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
-              size: 22,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                text,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: isDestructive
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).textTheme.bodyLarge?.color,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTheme.body(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.firaCode(
+                    fontSize: 11,
+                    color: AppTheme.textMuted,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            time,
+            style: GoogleFonts.firaCode(
+              fontSize: 11,
+              color: AppTheme.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSettingsMenu(BuildContext context) {
+    final userAsync = ref.read(userProfileProvider);
+    final user = userAsync.value;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.border,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: isDestructive
-                  ? Theme.of(context).colorScheme.error.withValues(alpha: 0.5)
-                  : Theme.of(context).iconTheme.color?.withValues(alpha: 0.3),
-              size: 20,
-            ),
+            const SizedBox(height: 16),
+            _settingsItem(Icons.edit_outlined, 'Edit Profile', () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditProfileScreen(currentProfile: user ?? {}),
+                ),
+              );
+            }),
+            _settingsItem(Icons.bookmark_outline, 'Saved Questions', () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SavedQuestionsScreen()),
+              );
+            }),
+            _settingsItem(Icons.code_rounded, 'My Contributions', () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MyContributionsScreen(),
+                ),
+              );
+            }),
+            _settingsItem(Icons.logout_rounded, 'Logout', () {
+              Navigator.pop(context);
+              ref.read(authStateProvider.notifier).logout();
+              Navigator.of(context).pushReplacementNamed('/login');
+            }, color: AppTheme.error),
           ],
         ),
       ),
     );
   }
+
+  Widget _settingsItem(
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    Color? color,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? AppTheme.textSecondary, size: 22),
+      title: Text(
+        label,
+        style: AppTheme.body(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: color ?? AppTheme.textPrimary,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}k';
+    return count.toString();
+  }
+}
+
+// Simple XP chart painter
+class _XPChartPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final points = [0.3, 0.35, 0.4, 0.55, 0.5, 0.65, 0.75, 0.85];
+    final paint = Paint()
+      ..color = AppTheme.textPrimary
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppTheme.textPrimary.withValues(alpha: 0.1),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTRB(0, 0, size.width, size.height));
+
+    final path = Path();
+    final fillPath = Path();
+    final spacing = size.width / (points.length - 1);
+
+    for (int i = 0; i < points.length; i++) {
+      final x = i * spacing;
+      final y = size.height - (points[i] * size.height);
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+      } else {
+        final prevX = (i - 1) * spacing;
+        final prevY = size.height - (points[i - 1] * size.height);
+        final cx1 = prevX + spacing * 0.5;
+        final cx2 = x - spacing * 0.5;
+        path.cubicTo(cx1, prevY, cx2, y, x, y);
+        fillPath.cubicTo(cx1, prevY, cx2, y, x, y);
+      }
+    }
+
+    // Fill
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Line
+    canvas.drawPath(path, paint);
+
+    // Dots
+    final dotPaint = Paint()
+      ..color = AppTheme.textPrimary
+      ..style = PaintingStyle.fill;
+    for (int i = 0; i < points.length; i++) {
+      final x = i * spacing;
+      final y = size.height - (points[i] * size.height);
+      canvas.drawCircle(Offset(x, y), 4, dotPaint);
+      canvas.drawCircle(Offset(x, y), 2, Paint()..color = AppTheme.background);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
