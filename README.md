@@ -142,3 +142,36 @@ lib/
 ├── screens/             # UI Pages (Auth, Duel, Home, etc.)
 └── widgets/             # Reusable UI Components
 ```
+
+---
+
+## Quality Checks
+
+### Full Repository Gate
+```bash
+npm run quality:check
+```
+
+CI also validates that the Flutter web app can compile in release mode (`flutter build web --release`).
+
+### Backend
+```bash
+cd backend
+npm test
+```
+
+### Frontend
+```bash
+cd frontend
+flutter pub get
+flutter analyze
+flutter test
+```
+
+### Linux Path Note (apostrophe in folder name)
+If your project path contains an apostrophe (example: `kalp's projects`), `flutter test` can fail due to URI parsing in generated test listeners.
+
+Use this safe helper from the repository root:
+```bash
+bash frontend/scripts/run_safe_tests.sh
+```
