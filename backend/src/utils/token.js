@@ -46,7 +46,6 @@ function generateRefreshToken(payload) {
  */
 function verifyAccessToken(token) {
   try {
-    console.error(`DEBUG: verifyAccessToken using secret: ${config.JWT_SECRET.substring(0, 5)}... (len: ${config.JWT_SECRET.length})`);
     return jwt.verify(token, config.JWT_SECRET, {
       issuer: 'learnduels',
       audience: 'learnduels-client',
